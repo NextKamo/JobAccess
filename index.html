@@ -82,7 +82,9 @@
                                 <div>
                                     <button type="button" class="max-w-xs bg-white rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="user-menu-button" aria-expanded="false" aria-haspopup="true" onclick="toggleUserDropdown()">
                                         <span class="sr-only">Open user menu</span>
-                                        <div id="user-avatar" class="h-9 w-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base"></div>
+                                        <div id="user-avatar-container">
+                                            <img id="user-avatar" class="h-9 w-9 rounded-full object-cover" src="" alt="User avatar">
+                                        </div>
                                     </button>
                                 </div>
                                 <div id="user-dropdown" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
@@ -108,10 +110,11 @@
                 <div class="pt-4 pb-3 border-t border-slate-200">
                      <div id="mobile-user-info" class="hidden items-center px-5">
                         <div class="flex-shrink-0">
-                           <div id="mobile-user-avatar" class="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base"></div>
+                           <img id="mobile-user-avatar" class="h-10 w-10 rounded-full object-cover" src="" alt="User avatar">
                         </div>
                         <div class="ml-3">
                             <div id="mobile-user-name" class="text-base font-medium leading-none text-gray-800"></div>
+                             <div id="mobile-user-email" class="text-sm font-medium leading-none text-gray-500 mt-1"></div>
                         </div>
                     </div>
                     <div id="mobile-auth-buttons" class="mt-3 px-2 space-y-1">
@@ -247,7 +250,7 @@
 
         // --- APPLICATION STATE ---
         const state = {
-            currentUser: null, // { uid, email, name, type, initials }
+            currentUser: null, // { uid, email, name, type, initials, photoURL }
             currentView: 'landing',
             jobs: [],
             applications: [],
@@ -273,6 +276,7 @@
                 skills: '',
             },
             selectedCvFile: null,
+            newPhotoPreview: null,
         };
 
         // --- MOCK DATA ---
@@ -369,6 +373,7 @@
             const mobileUserInfo = document.getElementById('mobile-user-info');
             const mobileUserAvatar = document.getElementById('mobile-user-avatar');
             const mobileUserName = document.getElementById('mobile-user-name');
+            const mobileUserEmail = document.getElementById('mobile-user-email');
 
             // --- Define Links based on state ---
             let links = [];
@@ -438,12 +443,15 @@
             if (state.currentUser) {
                 authButtons.classList.add('hidden');
                 userMenu.classList.remove('hidden');
-                userAvatar.textContent = state.currentUser.initials;
+                userAvatar.src = state.currentUser.photoURL;
+                userAvatar.onerror = () => { userAvatar.src = `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`; };
                 
                 mobileAuthButtons.classList.add('hidden');
                 mobileUserInfo.classList.remove('hidden');
-                mobileUserAvatar.textContent = state.currentUser.initials;
+                mobileUserAvatar.src = state.currentUser.photoURL;
+                mobileUserAvatar.onerror = () => { mobileUserAvatar.src = `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`; };
                 mobileUserName.textContent = state.currentUser.name;
+                mobileUserEmail.textContent = state.currentUser.email;
 
             } else {
                 authButtons.classList.remove('hidden');
@@ -1010,7 +1018,7 @@
                     <h3 class="font-bold text-lg text-slate-800">${candidate.name}</h3>
                     <p class="text-sm text-slate-500 mt-1">${candidate.experience || '0'} years of experience</p>
                     <p class="text-sm text-slate-500 mt-1">${candidate.location || 'Not specified'}</p>
-                    <span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${candidate.jobType || 'Not specified'}</span>
+                    <span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${candidate.jobType || 'Full-time'}</span>
                 </div>
                 <div class="flex-grow mt-4">
                     <div class="flex flex-wrap gap-2">
@@ -1099,6 +1107,16 @@
                         <h2 class="text-2xl font-bold text-slate-800">Public Profile</h2>
                         <p class="text-slate-500 mt-1 mb-6">This information will be displayed on your public profile.</p>
                         <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Profile Photo</label>
+                                <div class="mt-1 flex items-center gap-4">
+                                    <img id="profile-photo-preview" src="${userProfile.photoURL || `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`}" class="h-20 w-20 rounded-full object-cover" alt="Profile photo preview">
+                                    <label for="photo-upload" class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                        <span>Change</span>
+                                        <input id="photo-upload" name="photo" type="file" class="sr-only" accept="image/*" onchange="handlePhotoFileSelect(event)">
+                                    </label>
+                                </div>
+                            </div>
                              <div>
                                 <label class="block text-sm font-medium text-slate-700">Full Name</label>
                                 <input name="name" type="text" value="${userProfile.name || ''}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
@@ -1185,7 +1203,7 @@
                                         <label class="block text-sm font-medium text-slate-700">Current Password</label>
                                         <div class="relative mt-1">
                                             <input id="current-password" type="password" class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                            <button type="button" onclick="togglePasswordVisibility('current-password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                            <button type="button" onclick="togglePasswordVisibility('current-password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
                                                 <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
                                             </button>
                                         </div>
@@ -1194,7 +1212,7 @@
                                         <label class="block text-sm font-medium text-slate-700">New Password</label>
                                         <div class="relative mt-1">
                                             <input id="new-password" type="password" class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                            <button type="button" onclick="togglePasswordVisibility('new-password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                            <button type="button" onclick="togglePasswordVisibility('new-password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
                                                 <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
                                             </button>
                                         </div>
@@ -1320,7 +1338,7 @@
                             <label for="password" class="text-sm font-medium text-slate-700">Password</label>
                              <div class="relative mt-1">
                                 <input id="password" name="password" type="password" autocomplete="current-password" required class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <button type="button" onclick="togglePasswordVisibility('password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
                                     <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
                                 </button>
                             </div>
@@ -1380,8 +1398,12 @@
             }).filter(Boolean);
 
             const applicantListHtml = applicants.map(candidate => { 
+                const photoURL = candidate.photoURL || `https://placehold.co/100x100/6366f1/ffffff?text=${candidate.name.charAt(0)}`;
                 return `<tr class="hover:bg-slate-50">
-                    <td class="p-4 font-medium text-slate-800">${candidate.name}</td>
+                    <td class="p-4 font-medium text-slate-800 flex items-center gap-3">
+                        <img src="${photoURL}" class="w-8 h-8 rounded-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x100/6366f1/ffffff?text=${candidate.name.charAt(0)}'"/>
+                        <span>${candidate.name}</span>
+                    </td>
                     <td class="p-4 text-slate-600">${candidate.email || 'Not provided'}</td>
                     <td class="p-4 text-slate-500">${candidate.skills || ''}</td>
                     <td class="p-4"><span class="status-badge status-${candidate.status}">${candidate.status}</span></td>
@@ -1479,13 +1501,18 @@
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
+                
+                const nameParts = name.split(' ');
+                const initials = nameParts.length > 1 ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}` : name.substring(0, 2);
+                const photoURL = `https://placehold.co/100x100/6366f1/ffffff?text=${initials.toUpperCase()}`;
 
                 // Create user document in Firestore
                 await setDoc(doc(db, "users", user.uid), {
                     name: name,
                     email: email,
                     type: type,
-                    savedJobs: []
+                    savedJobs: [],
+                    photoURL: photoURL
                 });
 
                 if (type === 'seeker') {
@@ -1504,7 +1531,8 @@
                         workExperience: [],
                         education: [],
                         projects: [],
-                        cvFileName: ''
+                        cvFileName: '',
+                        photoURL: photoURL
                     });
                 }
                 
@@ -1536,8 +1564,15 @@
                 skills: formData.get('skills'),
                 experience: formData.get('experience'),
                 summary: formData.get('summary'),
-                jobType: formData.get('jobType'),
+                jobType: formData.get('jobType') || 'Full-time',
             };
+
+            if (state.newPhotoPreview) {
+                // In a real app, you would upload this to Firebase storage and get a URL.
+                // For this simulation, we'll use the base64 data URL directly.
+                updatedProfile.photoURL = state.newPhotoPreview;
+                console.log(`Simulating upload of new profile photo.`);
+            }
 
             if (state.selectedCvFile) {
                 // In a real app, upload state.selectedCvFile to Firebase Storage here.
@@ -1547,9 +1582,20 @@
             }
 
             const profileDocRef = doc(db, "profiles", state.currentUser.uid);
+            const userDocRef = doc(db, "users", state.currentUser.uid);
             try {
                 await setDoc(profileDocRef, updatedProfile, { merge: true });
+                // Also update user collection if name or photoURL changed
+                const userUpdateData = {};
+                if (updatedProfile.name) userUpdateData.name = updatedProfile.name;
+                if (updatedProfile.photoURL) userUpdateData.photoURL = updatedProfile.photoURL;
+
+                if (Object.keys(userUpdateData).length > 0) {
+                    await setDoc(userDocRef, userUpdateData, { merge: true });
+                }
+                
                 state.selectedCvFile = null; // Reset after save
+                state.newPhotoPreview = null;
                 showConfirmationModal("Profile Updated", "Your profile has been successfully updated.", () => closeModal('confirmation-modal'), true, false, false);
             } catch (error) {
                 console.error("Error updating profile: ", error);
@@ -1621,15 +1667,15 @@
             closeIcon.classList.toggle('hidden');
         }
         
-        function togglePasswordVisibility(inputId) {
+        function togglePasswordVisibility(inputId, buttonEl) {
             const input = document.getElementById(inputId);
-            const icon = input.nextElementSibling.querySelector('i');
+            
             if (input.type === "password") {
                 input.type = "text";
-                icon.setAttribute('data-lucide', 'eye-off');
+                buttonEl.innerHTML = '<i data-lucide="eye-off" class="h-5 w-5 text-gray-400"></i>';
             } else {
                 input.type = "password";
-                icon.setAttribute('data-lucide', 'eye');
+                buttonEl.innerHTML = '<i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>';
             }
             lucide.createIcons();
         }
@@ -1649,6 +1695,21 @@
             if (uploadTextEl) {
                 uploadTextEl.textContent = 'Replace file';
             }
+        }
+
+        function handlePhotoFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                state.newPhotoPreview = e.target.result;
+                const previewImg = document.getElementById('profile-photo-preview');
+                if (previewImg) {
+                    previewImg.src = e.target.result;
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         function showPostJobModal() {
@@ -2202,16 +2263,20 @@
             
             // Get email from the allUsers object as a fallback
             const userEmail = state.allUsers[candidateId]?.email;
+            const photoURL = candidate.photoURL || `https://placehold.co/100x100/6366f1/ffffff?text=${candidate.name.charAt(0)}`;
 
             const modalContent = candidateDetailsModalEl.querySelector('.modal-content');
             modalContent.innerHTML = `
                 <div class="p-6 border-b flex justify-between items-start">
                     <div class="flex items-center gap-4">
-                        <div class="w-16 h-16 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 text-2xl">${candidate.name.charAt(0)}</div>
+                        <img src="${photoURL}" class="w-16 h-16 rounded-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x100/6366f1/ffffff?text=${candidate.name.charAt(0)}'"/>
                         <div>
                             <h2 class="text-2xl font-bold text-slate-800">${candidate.name}</h2>
                             <p class="text-slate-500">${candidate.location || 'Location not specified'}</p>
-                            <p class="text-sm text-slate-500 mt-1">${candidate.jobType || ''} &bull; ${candidate.experience || '0'} years experience</p>
+                            <div class="flex items-center gap-4 mt-1">
+                                <span class="text-sm text-slate-500 flex items-center gap-1"><i data-lucide="briefcase" class="w-4 h-4 text-slate-400"></i>${candidate.jobType || 'Full-time'}</span>
+                                <span class="text-sm text-slate-500 flex items-center gap-1"><i data-lucide="trending-up" class="w-4 h-4 text-slate-400"></i>${candidate.experience || '0'} years experience</span>
+                            </div>
                         </div>
                     </div>
                     <button onclick="closeModal('candidate-details-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
@@ -2453,6 +2518,7 @@
         window.handleApply = handleApply;
         window.handleUpdateProfile = handleUpdateProfile;
         window.handleCvFileSelect = handleCvFileSelect;
+        window.handlePhotoFileSelect = handlePhotoFileSelect;
         window.handleDownloadCv = handleDownloadCv;
         window.handleDownloadProfilePdf = handleDownloadProfilePdf;
         window.selectRecruiterJobAndNavigate = selectRecruiterJobAndNavigate;
@@ -2543,7 +2609,8 @@
                             email: user.email,
                             name: userData.name,
                             type: userData.type,
-                            initials: initials.toUpperCase()
+                            initials: initials.toUpperCase(),
+                            photoURL: userData.photoURL
                         };
                         state.savedJobs = userData.savedJobs || [];
                         
