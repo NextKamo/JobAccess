@@ -259,6 +259,2624 @@
             jobsPerPage: 8,
             recruiterJobsCurrentPage: 1,
             recruiterJobsPerPage: 6,
+            selectedRecruiterJobId: null,
+            mobileShowDetails: false,
+            settingsActiveTab: 'profile',
+            authLockoutActive: false,
+            recruiterDashboardChart: null,
+            seekerDashboardChart: null,
+            cvSearchTerm: '',
+            cvFilters: {
+                experience: 'any',
+                location: '',
+                jobType: [],
+                skills: '',
+            },
+            selectedCvFile: null,
+        };
+
+        // --- MOCK DATA ---
+        function generateMockData() {
+            // state.candidates is now populated from Firestore, so this function is for any other mock data if needed.
+        }
+
+        // --- DOM ELEMENTS ---
+        const views = {
+            landing: document.getElementById('landing-view'),
+            findJobs: document.getElementById('find-jobs-view'),
+            seekerDashboard: document.getElementById('seeker-dashboard-view'),
+            seekerApplications: document.getElementById('seeker-applications-view'),
+            seekerSavedJobs: document.getElementById('seeker-saved-jobs-view'),
+            recruiterDashboard: document.getElementById('recruiter-dashboard-view'),
+            recruiterJobs: document.getElementById('recruiter-jobs-view'),
+            cvDatabase: document.getElementById('cv-database-view'),
+            subscription: document.getElementById('subscription-view'),
+            settings: document.getElementById('settings-view'),
+        };
+        const loginModalEl = document.getElementById('login-modal');
+        const jobDetailsModalEl = document.getElementById('job-details-modal');
+        const applicantsModalEl = document.getElementById('applicants-modal');
+        const postJobModalEl = document.getElementById('post-job-modal');
+        const confirmationModalEl = document.getElementById('confirmation-modal');
+        const reportJobModalEl = document.getElementById('report-job-modal');
+        const candidateDetailsModalEl = document.getElementById('candidate-details-modal');
+        const cvFilterModalEl = document.getElementById('cv-filter-modal');
+
+        function selectRecruiterJobAndNavigate(jobId) {
+            state.selectedRecruiterJobId = jobId;
+            handleNavigate('recruiterJobs');
+        }
+
+        // --- ROUTING / NAVIGATION ---
+        function handleNavigate(view) {
+            if (view === 'dashboard' && state.currentUser) {
+                view = state.currentUser.type === 'seeker' ? 'seekerDashboard' : 'recruiterDashboard';
+            }
+             if (view === 'recruiterJobs') {
+                state.recruiterJobsCurrentPage = 1; 
+            }
+            if (view === 'findJobs') {
+                if (state.jobs.length > 0 && !state.selectedJobId) {
+                     state.selectedJobId = state.jobs[0].id;
+                }
+                state.jobsCurrentPage = 1;
+                state.mobileShowDetails = false;
+            }
+            if (view === 'settings' && state.currentUser) {
+                state.settingsActiveTab = state.currentUser.type === 'seeker' ? 'profile' : 'companyProfile';
+            }
+            state.currentView = view;
+            window.scrollTo(0, 0);
+            updateUI();
+        }
+
+        // --- UI UPDATE & RENDERING ---
+        function updateUI() {
+            Object.values(views).forEach(v => {
+                if (v) v.classList.remove('active');
+            });
+            if (views[state.currentView]) {
+                views[state.currentView].classList.add('active');
+            }
+
+            switch (state.currentView) {
+                case 'landing': renderLandingPage(); break;
+                case 'findJobs': renderFindJobsPage(); break;
+                case 'seekerDashboard': renderSeekerDashboard(); break;
+                case 'seekerApplications': renderSeekerApplications(); break;
+                case 'seekerSavedJobs': renderSeekerSavedJobs(); break;
+                case 'recruiterDashboard': renderRecruiterDashboard(); break;
+                case 'recruiterJobs': renderRecruiterJobsPage(); break;
+                case 'cvDatabase': renderCvDatabasePage(); break;
+                case 'subscription': renderSubscriptionPage(); break;
+                case 'settings': renderSettingsPage(); break;
+            }
+            updateHeader();
+        }
+
+        function updateHeader() {
+            // Desktop elements
+            const navLinks = document.getElementById('nav-links');
+            const authSection = document.getElementById('auth-section');
+            const authButtons = document.getElementById('auth-buttons');
+            const userMenu = document.getElementById('user-menu');
+            const userAvatar = document.getElementById('user-avatar');
+            const userDropdown = document.getElementById('user-dropdown');
+            
+            // Mobile elements
+            const mobileNavLinks = document.getElementById('mobile-nav-links');
+            const mobileAuthButtons = document.getElementById('mobile-auth-buttons');
+            const mobileUserInfo = document.getElementById('mobile-user-info');
+            const mobileUserAvatar = document.getElementById('mobile-user-avatar');
+            const mobileUserName = document.getElementById('mobile-user-name');
+
+            // --- Define Links based on state ---
+            let links = [];
+             if (!state.currentUser) {
+                links = [ { text: 'Home', view: 'landing' }, { text: 'Find Jobs', view: 'findJobs' }];
+            } else if (state.currentUser.type === 'seeker') {
+                links = [ { text: 'Dashboard', view: 'dashboard' }, { text: 'My Applications', view: 'seekerApplications'}, { text: 'Find Jobs', view: 'findJobs' }];
+            } else { // Recruiter
+                links = [ { text: 'Dashboard', view: 'recruiterDashboard'}, { text: 'Job Postings', view: 'recruiterJobs' }, { text: 'CV Database', view: 'cvDatabase' }, { text: 'Subscription', view: 'subscription' }];
+            }
+            
+            // --- Update User Dropdown ---
+            if(state.currentUser) {
+                let dropdownHtml = `<p class="block px-4 py-2 text-sm text-gray-700 font-bold truncate">${state.currentUser.name}</p>`;
+                if(state.currentUser.type === 'seeker'){
+                    dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('dashboard')">Dashboard</a>`;
+                    dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('seekerSavedJobs')">Saved Jobs</a>`;
+                } else { // Recruiter
+                     dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('recruiterDashboard')">Dashboard</a>`;
+                }
+                dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('settings')">Settings</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleLogout()">Sign out</a>`;
+                userDropdown.innerHTML = dropdownHtml;
+            }
+
+
+            // --- Populate Desktop Menu ---
+            navLinks.innerHTML = links.map(l => {
+                const isActive = state.currentView === l.view || 
+                                (l.view === 'dashboard' && state.currentView === 'seekerDashboard') ||
+                                (l.view === 'dashboard' && state.currentView === 'recruiterDashboard');
+                const classes = isActive 
+                    ? 'text-indigo-600 font-semibold px-3 py-2 rounded-md text-sm' 
+                    : 'text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium';
+                return `<a href="#" class="${classes}" onclick="handleNavigate('${l.view}')">${l.text}</a>`;
+            }).join('');
+
+            // --- Populate Mobile Menu ---
+            let mobileLinksHtml = links.map(l => {
+                 const isActive = state.currentView === l.view || 
+                                (l.view === 'dashboard' && state.currentView === 'seekerDashboard') ||
+                                (l.view === 'dashboard' && state.currentView === 'recruiterDashboard');
+                 const classes = isActive 
+                    ? 'bg-indigo-50 text-indigo-700 block px-3 py-2 rounded-md text-base font-medium' 
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
+                return `<a href="#" class="${classes}" onclick="handleNavigate('${l.view}'); toggleMobileMenu();">${l.text}</a>`;
+            }).join('');
+            
+            if(state.currentUser) {
+                 const settingsActive = state.currentView === 'settings';
+                 const settingsClasses = settingsActive 
+                    ? 'bg-indigo-50 text-indigo-700 block px-3 py-2 rounded-md text-base font-medium'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
+                
+                 if(state.currentUser.type === 'seeker') {
+                     const savedJobsActive = state.currentView === 'seekerSavedJobs';
+                     const savedJobsClasses = savedJobsActive ? 'bg-indigo-50 text-indigo-700 block px-3 py-2 rounded-md text-base font-medium' : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
+                     mobileLinksHtml += `<a href="#" class="${savedJobsClasses}" onclick="handleNavigate('seekerSavedJobs'); toggleMobileMenu();">Saved Jobs</a>`;
+                 }
+                
+                 mobileLinksHtml += `<a href="#" class="${settingsClasses}" onclick="handleNavigate('settings'); toggleMobileMenu();">Settings</a>`;
+                 mobileLinksHtml += `<a href="#" class="text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium" onclick="handleLogout(); toggleMobileMenu();">Sign out</a>`;
+            }
+            mobileNavLinks.innerHTML = mobileLinksHtml;
+
+            // --- Update Auth sections ---
+            if (state.currentUser) {
+                authButtons.classList.add('hidden');
+                userMenu.classList.remove('hidden');
+                userAvatar.textContent = state.currentUser.initials;
+                
+                mobileAuthButtons.classList.add('hidden');
+                mobileUserInfo.classList.remove('hidden');
+                mobileUserAvatar.textContent = state.currentUser.initials;
+                mobileUserName.textContent = state.currentUser.name;
+
+            } else {
+                authButtons.classList.remove('hidden');
+                userMenu.classList.add('hidden');
+                userDropdown.classList.add('hidden'); // ensure user dropdown is hidden
+                authButtons.innerHTML = `
+                    <div class="relative" id="login-menu">
+                         <button onclick="toggleLoginDropdown()" class="bg-indigo-600 text-white font-medium px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                            <span>Login / Sign Up</span>
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </button>
+                        <div id="login-dropdown" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden">
+                            <div class="py-1" role="menu" aria-orientation="vertical">
+                                <a href="#" onclick="showLoginModal('seeker', 'login'); toggleLoginDropdown();" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i data-lucide="user" class="w-4 h-4 text-indigo-600"></i>
+                                    <span>I'm a Job Seeker</span>
+                                </a>
+                                <a href="#" onclick="showLoginModal('recruiter', 'login'); toggleLoginDropdown();" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i data-lucide="briefcase" class="w-4 h-4 text-indigo-600"></i>
+                                    <span>I'm a Recruiter</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                mobileAuthButtons.classList.remove('hidden');
+                mobileUserInfo.classList.add('hidden');
+                mobileAuthButtons.innerHTML = `
+                    <div class="px-2">
+                         <button onclick="showLoginModal('seeker', 'login'); toggleMobileMenu();" class="w-full text-gray-700 font-medium px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2">
+                            <i data-lucide="user" class="w-5 h-5"></i>
+                            <span>Job Seeker Login/Sign Up</span>
+                        </button>
+                        <button onclick="showLoginModal('recruiter', 'login'); toggleMobileMenu();" class="mt-3 w-full text-gray-700 font-medium px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2">
+                           <i data-lucide="briefcase" class="w-5 h-5"></i>
+                           <span>Recruiter Login/Sign Up</span>
+                        </button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        // --- COMPONENT RENDERERS ---
+
+        function renderLandingPage() {
+             const jobListingsHtml = state.jobs.slice(0, 3).map(job => {
+                const postedDate = timeAgo(job.postedDate);
+                return `
+                <div class="bg-white p-6 rounded-xl border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">${job.title}</h3>
+                            <p class="text-slate-600 font-medium">${job.company}</p>
+                            <p class="text-sm text-slate-500 mt-1">${job.location}</p>
+                            <p class="text-sm font-semibold text-emerald-600 mt-1">${job.salary || 'Market Related'}</p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <span class="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${job.type}</span>
+                            <p class="text-xs text-slate-400 mt-2">${postedDate}</p>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            views.landing.innerHTML = `
+                <div class="bg-white">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight">Find Your Next Big Opportunity</h1>
+                        <p class="mt-4 max-w-2xl mx-auto text-lg text-slate-600">The premier platform for connecting top talent with innovative companies in South Africa.</p>
+                        <div class="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-4">
+                            <input type="text" placeholder="Job title, keywords, or company" class="flex-grow w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                            <button class="bg-indigo-600 text-white font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors" onclick="handleNavigate('findJobs')">Search Jobs</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-8">Featured Jobs</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${jobListingsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectJob(jobId) {
+            state.selectedJobId = jobId;
+            if (window.innerWidth < 1024) { // lg breakpoint
+                state.mobileShowDetails = true;
+            }
+            renderFindJobsPage();
+        }
+
+        function showJobListOnMobile() {
+            state.mobileShowDetails = false;
+            renderFindJobsPage();
+        }
+
+        function changePage(page) {
+            state.jobsCurrentPage = page;
+            const indexOfLastJob = state.jobsCurrentPage * state.jobsPerPage;
+            const indexOfFirstJob = indexOfLastJob - state.jobsPerPage;
+            const currentJobs = state.jobs.slice(indexOfFirstJob, indexOfLastJob);
+            if(currentJobs.length > 0) {
+                state.selectedJobId = currentJobs[0].id;
+            }
+            renderFindJobsPage();
+        }
+
+        function renderFindJobsPage() {
+            const indexOfLastJob = state.jobsCurrentPage * state.jobsPerPage;
+            const indexOfFirstJob = indexOfLastJob - state.jobsPerPage;
+            const currentJobs = state.jobs.slice(indexOfFirstJob, indexOfLastJob);
+            const totalPages = Math.ceil(state.jobs.length / state.jobsPerPage);
+
+            const jobListHtml = currentJobs.map(job => {
+                const isSelected = job.id === state.selectedJobId;
+                const companyInitial = job.company.charAt(0);
+                const postedDate = timeAgo(job.postedDate);
+                const isSaved = state.currentUser && state.savedJobs.includes(job.id);
+                
+                return `
+                    <div class="p-4 rounded-lg cursor-pointer border-2 ${isSelected ? 'bg-white border-indigo-500 shadow-md' : 'bg-white border-transparent hover:border-slate-300'}" onclick="selectJob('${job.id}')">
+                        <div class="flex items-start gap-4">
+                             <div class="w-12 h-12 rounded-lg bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 text-xl">${companyInitial}</div>
+                            <div class="flex-grow">
+                                <h3 class="font-bold text-slate-800">${job.title}</h3>
+                                <p class="text-sm text-slate-600">${job.company}</p>
+                                <p class="text-xs text-slate-500 mt-1">${job.location}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 flex flex-col items-end">
+                                 <p class="text-xs text-slate-400 mb-2">${postedDate}</p>
+                                 ${state.currentUser && state.currentUser.type === 'seeker' ? `<button onclick="event.stopPropagation(); handleSaveJob('${job.id}')" class="text-slate-400 hover:text-indigo-600">${isSaved ? '<i data-lucide="bookmark" class="w-5 h-5 text-indigo-600 fill-current"></i>' : '<i data-lucide="bookmark" class="w-5 h-5"></i>'}</button>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+            
+            let paginationHtml = '<div class="flex justify-center items-center gap-2 mt-4">';
+            paginationHtml += `<button onclick="changePage(${state.jobsCurrentPage - 1})" ${state.jobsCurrentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded-md bg-white border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">&laquo; Prev</button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                paginationHtml += `<button onclick="changePage(${i})" class="px-3 py-1 rounded-md border text-sm font-medium ${state.jobsCurrentPage === i ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}">${i}</button>`;
+            }
+            paginationHtml += `<button onclick="changePage(${state.jobsCurrentPage + 1})" ${state.jobsCurrentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded-md bg-white border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next &raquo;</button></div>`;
+
+            const selectedJob = state.jobs.find(j => j.id === state.selectedJobId);
+            const backButtonHtml = `<button onclick="showJobListOnMobile()" class="lg:hidden mb-4 flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800"><i data-lucide="arrow-left" class="w-4 h-4"></i>Back to Job List</button>`;
+            const postedDateDetails = selectedJob ? timeAgo(selectedJob.postedDate) : '';
+            const closingDateDetails = selectedJob && selectedJob.closingDate ? `Closes ${selectedJob.closingDate.toDate().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}` : '';
+            const hasApplied = state.currentUser && state.applications.find(app => app.jobId === selectedJob?.id);
+
+            const reportButtonHtml = `<div class="p-6 text-center text-xs text-slate-400">
+                <a href="#" onclick="showReportJobModal('${selectedJob ? selectedJob.id : ''}')" class="hover:text-red-600 hover:underline">Report this job</a>
+            </div>`;
+            const jobDetailsHtml = selectedJob ? `${window.innerWidth < 1024 ? backButtonHtml : ''}<div class="bg-white rounded-xl border border-slate-200 h-full flex flex-col job-list-container"><div class="p-6 border-b sticky top-0 bg-white"><div class="flex flex-col sm:flex-row justify-between items-start gap-4"><div><h2 class="text-xl font-bold text-slate-800">${selectedJob.title}</h2><p class="text-slate-600 font-medium mt-1">${selectedJob.company}</p><p class="text-sm text-slate-500">${selectedJob.location} &bull; <span class="text-slate-400">${postedDateDetails}</span></p><p class="text-sm font-semibold text-emerald-600 mt-1">${selectedJob.salary || 'Market Related'}</p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p><span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${selectedJob.type}</span></div><button onclick="handleApply('${selectedJob.id}')" ${hasApplied ? 'disabled' : ''} class="bg-indigo-600 text-white font-medium px-6 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex-shrink-0 w-full sm:w-auto disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div></div><div class="p-6 overflow-y-auto flex-grow"><h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Job Description</h3><p class="text-slate-600 whitespace-pre-wrap leading-relaxed">${selectedJob.description}</p></div>${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-center h-full bg-white rounded-xl border border-slate-200 text-slate-500">Select a job to view details</div>`;
+
+            const isMobile = window.innerWidth < 1024;
+            const listClasses = isMobile && state.mobileShowDetails ? 'hidden' : 'block';
+            const detailsClasses = isMobile && !state.mobileShowDetails ? 'hidden' : 'block';
+
+            views.findJobs.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                     <div class="bg-white p-4 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row items-center gap-4">
+                         <div class="relative flex-grow w-full"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-slate-400"></i></div><input type="text" placeholder="Search by skill, title or company" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></div>
+                         <div class="relative flex-grow w-full"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="map-pin" class="w-5 h-5 text-slate-400"></i></div><input type="text" placeholder="Location, e.g., 'Pretoria'" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></div>
+                        <button class="w-full md:w-auto text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-6 py-2.5 rounded-lg text-sm transition-colors flex-shrink-0">Search</button>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="lg:col-span-1 ${listClasses}">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Showing ${currentJobs.length} of ${state.jobs.length} Jobs</h2>
+                            <div class="space-y-3">${jobListHtml}</div>
+                             ${paginationHtml}
+                        </div>
+                        <div class="lg:col-span-1 ${detailsClasses}">
+                            ${jobDetailsHtml}
+                        </div>
+                    </div>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        function renderSeekerDashboard() {
+            if (!state.currentUser) return;
+            const myApplications = state.applications;
+            const statusCounts = myApplications.reduce((acc, app) => {
+                acc[app.status] = (acc[app.status] || 0) + 1;
+                return acc;
+            }, { applied: 0, viewed: 0, shortlisted: 0, rejected: 0, hired: 0 });
+
+            const recommendedJobs = state.jobs.slice(3,6);
+
+            views.seekerDashboard.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Welcome, ${state.currentUser.name}!</h1>
+                        <p class="text-slate-500">Signed in as ${state.currentUser.email}</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Applications Sent</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${myApplications.length}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Interviews Scheduled</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">1</p> <!-- Mock -->
+                        </div>
+                         <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Jobs Saved</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${state.savedJobs.length}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Recent Application Activity</h3>
+                             <div class="space-y-4">
+                                ${myApplications.slice(0,3).map(app => {
+                                    const job = state.jobs.find(j => j.id === app.jobId);
+                                    return job ? `<div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50">
+                                        <div class="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-500">${job.company.charAt(0)}</div>
+                                        <div class="flex-grow"><p class="font-semibold text-sm">Applied for ${job.title}</p><p class="text-xs text-slate-500">${job.company}</p></div>
+                                        <span class="status-badge status-${app.status}">${app.status}</span>
+                                    </div>` : '';
+                                }).join('')}
+                             </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Application Status</h3>
+                            <canvas id="seeker-application-chart" class="max-h-60 mx-auto"></canvas>
+                        </div>
+                    </div>
+
+                     <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
+                         <h3 class="text-lg font-bold text-slate-800 mb-4">Recommended For You</h3>
+                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                             ${recommendedJobs.map(job => `
+                                 <div class="p-4 rounded-lg border hover:shadow-md cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
+                                     <h4 class="font-bold text-slate-800">${job.title}</h4>
+                                     <p class="text-sm text-slate-600">${job.company}</p>
+                                     <p class="text-xs text-slate-500 mt-1">${job.location}</p>
+                                 </div>
+                             `).join('')}
+                         </div>
+                    </div>
+                </div>
+            `;
+            
+            // This needs to be delayed slightly to ensure the canvas element is in the DOM
+            setTimeout(() => {
+                const ctx = document.getElementById('seeker-application-chart');
+                if (ctx) {
+                     if(state.seekerDashboardChart) {
+                         state.seekerDashboardChart.destroy();
+                    }
+                    state.seekerDashboardChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(statusCounts).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                            datasets: [{
+                                label: 'Applications',
+                                data: Object.values(statusCounts),
+                                 backgroundColor: ['#e0f2fe', '#dbeafe', '#d1fae5', '#fee2e2', '#f0abfc'],
+                                 borderColor: ['#0284c7', '#3b82f6', '#059669', '#dc2626', '#c026d3'],
+                                 borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                }
+            }, 0);
+        }
+
+        function renderSeekerApplications() {
+            if (!state.currentUser) return;
+            
+            const myApplications = state.applications;
+
+            const applicationListHtml = myApplications.length > 0 ? myApplications.map(app => {
+                const job = state.jobs.find(j => j.id === app.jobId);
+                return job ? `<tr class="hover:bg-slate-50">
+                    <td class="p-4 font-medium text-slate-800">${job.title}</td>
+                    <td class="p-4 text-slate-600">${job.company}</td>
+                    <td class="p-4 text-slate-500">${app.appliedDate.toDate().toLocaleDateString('en-ZA')}</td>
+                    <td class="p-4"><span class="status-badge status-${app.status}">${app.status}</span></td>
+                    <td class="p-4 text-right">
+                        <button onclick="showJobDetails('${job.id}')" class="text-indigo-600 hover:text-indigo-800 font-medium">View Job</button>
+                    </td>
+                </tr>` : '';
+            }).join('') : '<tr><td colspan="5" class="text-center p-8 text-slate-500">You have not applied for any jobs yet.</td></tr>';
+            
+            views.seekerApplications.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <h1 class="text-3xl font-bold text-slate-800 mb-8">My Applications</h1>
+                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left min-w-[640px]">
+                                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider"><tr><th class="p-4">Job Title</th><th class="p-4">Company</th><th class="p-4">Date Applied</th><th class="p-4">Status</th><th class="p-4"></th></tr></thead>
+                                <tbody>${applicationListHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderSeekerSavedJobs() {
+            const savedJobObjects = state.savedJobs.map(jobId => state.jobs.find(j => j.id === jobId)).filter(Boolean);
+
+            const savedJobsHtml = savedJobObjects.length > 0 ? savedJobObjects.map(job => {
+                const postedDate = timeAgo(job.postedDate);
+                 return `
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">${job.title}</h3>
+                            <p class="text-slate-600 font-medium">${job.company}</p>
+                            <p class="text-sm text-slate-500 mt-1">${job.location} &bull; <span class="text-slate-400">${postedDate}</span></p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                           <button onclick="handleSaveJob('${job.id}')" class="w-full sm:w-auto text-slate-500 bg-slate-100 hover:bg-slate-200 font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"><i data-lucide="trash-2" class="w-4 h-4"></i>Unsave</button>
+                           <button onclick="handleNavigate('findJobs'); selectJob('${job.id}');" class="w-full sm:w-auto text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"><i data-lucide="eye" class="w-4 h-4"></i>View</button>
+                        </div>
+                    </div>
+                `
+            }).join('') : `<p class="text-slate-500">You haven't saved any jobs yet.</p>`;
+
+            views.seekerSavedJobs.innerHTML = `
+                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <h1 class="text-3xl font-bold text-slate-800 mb-8">Saved Jobs</h1>
+                    <div class="space-y-4">
+                        ${savedJobsHtml}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+        
+        function changeRecruiterPage(page) {
+            state.recruiterJobsCurrentPage = page;
+            renderRecruiterJobsPage();
+        }
+        
+        function renderRecruiterJobsPage() {
+            if (!state.currentUser) return;
+
+            const recruiterJobs = state.jobs.filter(job => job.recruiterId === state.currentUser.uid);
+            // Pagination logic for recruiter jobs
+            const indexOfLastJob = state.recruiterJobsCurrentPage * state.recruiterJobsPerPage;
+            const indexOfFirstJob = indexOfLastJob - state.recruiterJobsPerPage;
+            const currentJobs = recruiterJobs.slice(indexOfFirstJob, indexOfLastJob);
+            const totalPages = Math.ceil(recruiterJobs.length / state.recruiterJobsPerPage);
+
+            const jobListingsHtml = currentJobs.length > 0 ? currentJobs.map(job => {
+                const postedDate = timeAgo(job.postedDate);
+                const applicantCount = state.applications.filter(app => app.jobId === job.id).length;
+                const isSelected = job.id === state.selectedRecruiterJobId;
+                return `
+                <div id="recruiter-job-${job.id}" class="bg-white p-6 rounded-xl border-2 ${isSelected ? 'border-indigo-500 shadow-md' : 'border-slate-200'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">${job.title}</h3>
+                            <p class="text-slate-600 font-medium">${job.company}</p>
+                            <p class="text-sm text-slate-500 mt-1">${job.location} &bull; <span class="text-slate-400">${postedDate}</span></p>
+                             <p class="text-sm font-semibold text-emerald-600 mt-1">${job.salary || 'Market Related'}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-slate-800">${applicantCount}</div>
+                            <div class="text-sm text-slate-500">Applicants</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-200 flex justify-end gap-2">
+                        <button onclick="showEditJobModal('${job.id}')" class="text-slate-500 bg-slate-100 hover:bg-slate-200 font-medium px-4 py-2 rounded-lg text-sm transition-colors">Edit</button>
+                        <button onclick="showApplicantsModal('${job.id}')" class="text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">View Applicants</button>
+                         <button onclick="showDeleteConfirmation('${job.id}')" class="text-white bg-red-600 hover:bg-red-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">Delete</button>
+                    </div>
+                </div>`;
+            }).join('')
+                : '<p class="text-slate-500 md:col-span-2">You haven\'t posted any jobs yet. Click "Post New Job" to get started.</p>';
+
+            // Pagination controls
+            let paginationHtml = '';
+            if (totalPages > 1) {
+                paginationHtml += '<div class="flex justify-center items-center gap-2 mt-8">';
+                paginationHtml += `<button onclick="changeRecruiterPage(${state.recruiterJobsCurrentPage - 1})" ${state.recruiterJobsCurrentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded-md bg-white border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">&laquo; Prev</button>`;
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationHtml += `<button onclick="changeRecruiterPage(${i})" class="px-3 py-1 rounded-md border text-sm font-medium ${state.recruiterJobsCurrentPage === i ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}">${i}</button>`;
+                }
+                paginationHtml += `<button onclick="changeRecruiterPage(${state.recruiterJobsCurrentPage + 1})" ${state.recruiterJobsCurrentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded-md bg-white border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next &raquo;</button></div>`;
+            }
+
+            views.recruiterJobs.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12"><div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4"><h1 class="text-3xl font-bold text-slate-800">Your Job Postings</h1><button onclick="showPostJobModal()" class="bg-indigo-600 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2 w-full sm:w-auto justify-center"><i data-lucide="plus-circle" class="w-5 h-5"></i>Post New Job</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">${jobListingsHtml}</div>
+                ${paginationHtml}
+                </div>`;
+            lucide.createIcons();
+            if (state.selectedRecruiterJobId) {
+                const el = document.getElementById(`recruiter-job-${state.selectedRecruiterJobId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                state.selectedRecruiterJobId = null; // Reset after use
+            }
+        }
+
+        function renderRecruiterDashboard() {
+             if (!state.currentUser) return;
+             const recruiterJobs = state.jobs.filter(job => job.recruiterId === state.currentUser.uid);
+             const recruiterJobIds = recruiterJobs.map(j => j.id);
+             
+             const recruiterApplications = state.applications.filter(app => recruiterJobIds.includes(app.jobId));
+             const now = getSimulatedNow();
+             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+             
+             const newApplicants = recruiterApplications.filter(app => app.appliedDate.toDate() > sevenDaysAgo).length;
+             
+             const jobsClosingSoon = recruiterJobs
+                .filter(job => job.closingDate && job.closingDate.toDate() > now)
+                .sort((a,b) => a.closingDate.toDate() - b.closingDate.toDate())
+                .slice(0, 3);
+            
+            const recentApplications = state.applications
+                .filter(app => recruiterJobIds.includes(app.jobId))
+                .sort((a, b) => b.appliedDate.toDate() - a.appliedDate.toDate())
+                .slice(0, 3);
+
+            const recentApplicantsDetails = recentApplications.map(app => {
+                const candidate = state.candidates.find(c => c.id === app.candidateId);
+                const job = state.jobs.find(j => j.id === app.jobId);
+                return { candidate, job };
+            }).filter(item => item.candidate && item.job);
+
+            views.recruiterDashboard.innerHTML = `
+                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Recruiter Dashboard</h1>
+                        <p class="text-slate-500">For ${state.currentUser.name} (${state.currentUser.email})</p>
+                    </div>
+                    
+                    <!-- Stat Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Active Jobs</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${recruiterJobs.length}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Total Applicants</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${recruiterApplications.length}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">New Applicants (7 days)</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${newApplicants}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- Application Trends -->
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200">
+                             <h3 class="text-lg font-bold text-slate-800 mb-4">Application Trends (Last 7 Days)</h3>
+                             <canvas id="application-chart"></canvas>
+                        </div>
+                        
+                        <!-- Recent Applicants -->
+                        <div class="bg-white rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 p-6 border-b">Recent Applicants</h3>
+                            <div class="p-6 space-y-4">
+                                ${recentApplicantsDetails.length > 0 ? recentApplicantsDetails.map(({candidate, job}) => `
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-500">${candidate.name.charAt(0)}</div>
+                                        <div><p class="font-semibold text-sm">${candidate.name}</p><p class="text-xs text-slate-500">Applied for ${job.title}</p></div>
+                                    </div>
+                                `).join('') : '<p class="text-sm text-slate-500">No recent applicants.</p>' }
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Jobs Closing Soon -->
+                     <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
+                         <h3 class="text-lg font-bold text-slate-800 mb-4">Jobs Nearing Closing Date</h3>
+                         <div class="space-y-2">
+                         ${jobsClosingSoon.length > 0 ? jobsClosingSoon.map(job => {
+                             const daysLeft = Math.ceil((job.closingDate.toDate() - now) / (1000 * 60 * 60 * 24));
+                             return `<div onclick="selectRecruiterJobAndNavigate('${job.id}')" class="flex justify-between items-center p-3 -m-3 rounded-lg cursor-pointer hover:bg-slate-50">
+                                <p class="font-medium text-slate-800">${job.title}</p>
+                                <p class="text-sm text-red-600">${daysLeft} day${daysLeft > 1 ? 's' : ''} left</p>
+                            </div>`;
+                         }).join('') : '<p class="text-slate-500 text-sm">No jobs are closing soon.</p>'}
+                         </div>
+                    </div>
+                </div>
+            `;
+
+            // Chart rendering
+            setTimeout(() => {
+                const ctx = document.getElementById('application-chart');
+                if (ctx) {
+                    if(state.recruiterDashboardChart) {
+                         state.recruiterDashboardChart.destroy();
+                    }
+                    const nowForChart = getSimulatedNow();
+                    const labels = Array(7).fill(0).map((_, i) => {
+                        const d = new Date(nowForChart.getTime() - (6-i) * 24 * 60 * 60 * 1000);
+                        return d.toLocaleDateString('en-ZA', { weekday: 'short' });
+                    });
+                     const applicationCounts = labels.map((label, i) => {
+                        const dayStart = new Date(nowForChart.getTime() - (6-i) * 24 * 60 * 60 * 1000);
+                        dayStart.setHours(0,0,0,0);
+                        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+                        return recruiterApplications.filter(app => {
+                            const appDate = app.appliedDate.toDate();
+                            return appDate >= dayStart && appDate < dayEnd;
+                        }).length;
+                    });
+                    state.recruiterDashboardChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Applications',
+                                data: applicationCounts,
+                                backgroundColor: 'rgba(79, 70, 229, 0.7)',
+                                borderColor: 'rgba(79, 70, 229, 1)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            }, 0);
+        }
+        
+        function renderCvDatabasePage() {
+            const searchTerm = state.cvSearchTerm.toLowerCase();
+            const { experience, location, jobType, skills } = state.cvFilters;
+            
+            let filteredCandidates = state.candidates.filter(candidate => {
+                const nameMatch = candidate.name.toLowerCase().includes(searchTerm);
+                const generalSkillsMatch = (candidate.skills || '').toLowerCase().includes(searchTerm);
+                
+                const experienceMatch = experience === 'any' || parseInt(candidate.experience) >= parseInt(experience);
+                
+                const locationMatch = !location || (candidate.location && candidate.location.toLowerCase().includes(location.toLowerCase()));
+
+                const jobTypeMatch = jobType.length === 0 || jobType.includes(candidate.jobType);
+
+                const specificSkills = skills.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+                const specificSkillsMatch = specificSkills.length === 0 || specificSkills.every(skill => (candidate.skills || '').toLowerCase().includes(skill));
+
+                return (nameMatch || generalSkillsMatch) && experienceMatch && locationMatch && jobTypeMatch && specificSkillsMatch;
+            });
+            
+            const candidatesHtml = filteredCandidates.map(candidate => `
+            <div class="bg-white p-6 rounded-xl border border-slate-200 flex flex-col">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800">${candidate.name}</h3>
+                    <p class="text-sm text-slate-500 mt-1">${candidate.experience || '0'} years of experience</p>
+                    <p class="text-sm text-slate-500 mt-1">${candidate.location || 'Not specified'}</p>
+                    <span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${candidate.jobType || 'Not specified'}</span>
+                </div>
+                <div class="flex-grow mt-4">
+                    <div class="flex flex-wrap gap-2">
+                        ${(candidate.skills || '').split(', ').filter(s => s).map(skill => `<span class="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-1 rounded-md">${skill}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-200 flex justify-end">
+                    <button onclick="showCandidateDetails('${candidate.id}')" class="text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">View Profile</button>
+                </div>
+            </div>`).join('');
+            
+            views.cvDatabase.innerHTML = `
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <h1 class="text-3xl font-bold text-slate-800 mb-2">CV Database</h1>
+                <p class="text-slate-600 mb-8">Search and discover talented candidates.</p>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 mb-8 flex items-center gap-4">
+                    <div class="relative flex-grow">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-slate-400"></i></div>
+                        <input type="text" id="cv-search-input" value="${state.cvSearchTerm}" placeholder="Search by name or skill, e.g., 'React'" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                    </div>
+                    <button onclick="showCvFilterModal()" class="text-slate-500 bg-slate-100 hover:bg-slate-200 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                        Filters
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${filteredCandidates.length > 0 ? candidatesHtml : '<p class="text-slate-500 md:col-span-3">No candidates match your search criteria.</p>'}
+                </div>
+            </div>`;
+
+            const searchInput = document.getElementById('cv-search-input');
+            searchInput.addEventListener('input', (e) => {
+                state.cvSearchTerm = e.target.value;
+                renderCvDatabasePage();
+            });
+
+            lucide.createIcons();
+        }
+
+        function renderSubscriptionPage() {
+            views.subscription.innerHTML = `<div class="bg-white"><div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center"><h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">Choose Your Plan</h1><p class="mt-4 max-w-2xl mx-auto text-lg text-slate-600">Simple, transparent pricing to help you find the best talent.</p></div></div><div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12"><div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"><div class="bg-white rounded-xl border border-slate-200 p-8 flex flex-col"><h3 class="text-lg font-semibold text-slate-800">Basic</h3><p class="mt-4 text-4xl font-bold text-slate-900">R499 <span class="text-xl font-medium text-slate-500">/ month</span></p><ul class="mt-6 space-y-4 text-slate-600"><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>5 job posts / month</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>50 CV views / month</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Basic analytics</li></ul><button class="mt-auto w-full bg-indigo-100 text-indigo-700 font-semibold py-3 px-4 rounded-lg hover:bg-indigo-200 transition-colors">Choose Basic</button></div><div class="bg-white rounded-xl border-2 border-indigo-600 p-8 flex flex-col relative"><div class="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2"><span class="bg-indigo-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">Most Popular</span></div><h3 class="text-lg font-semibold text-slate-800">Pro</h3><p class="mt-4 text-4xl font-bold text-slate-900">R1,499 <span class="text-xl font-medium text-slate-500">/ month</span></p><ul class="mt-6 space-y-4 text-slate-600"><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>20 job posts / month</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>500 CV views / month</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Advanced analytics</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Email support</li></ul><button class="mt-auto w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Choose Pro</button></div><div class="bg-white rounded-xl border border-slate-200 p-8 flex flex-col"><h3 class="text-lg font-semibold text-slate-800">Enterprise</h3><p class="mt-4 text-4xl font-bold text-slate-900">Contact Us</p><ul class="mt-6 space-y-4 text-slate-600"><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Unlimited job posts</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Unlimited CV views</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Team collaboration</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>Dedicated support</li></ul><button class="mt-auto w-full bg-indigo-100 text-indigo-700 font-semibold py-3 px-4 rounded-lg hover:bg-indigo-200 transition-colors">Contact Sales</button></div></div></div>`;
+            lucide.createIcons();
+        }
+
+        function handleSettingsTab(tab) {
+            state.settingsActiveTab = tab;
+            state.selectedCvFile = null; // Reset selected file on tab change
+            renderSettingsPage();
+        }
+
+        function renderSettingsPage() {
+            if (!state.currentUser) return;
+
+            const isSeeker = state.currentUser.type === 'seeker';
+            let tabs = [];
+            if (isSeeker) {
+                tabs = [
+                    { key: 'profile', label: 'Public Profile', icon: 'user' },
+                    { key: 'account', label: 'Account Settings', icon: 'settings' },
+                    { key: 'notifications', label: 'Notifications', icon: 'bell' },
+                ];
+            } else { // Recruiter
+                 tabs = [
+                    { key: 'companyProfile', label: 'Company Profile', icon: 'building-2' },
+                    { key: 'account', label: 'Account Settings', icon: 'settings' },
+                    { key: 'team', label: 'Team Members', icon: 'users' },
+                    { key: 'billing', label: 'Billing', icon: 'credit-card' },
+                ];
+            }
+
+            const sidebarHtml = tabs.map(tab => {
+                const isActive = state.settingsActiveTab === tab.key;
+                return `<a href="#" onclick="handleSettingsTab('${tab.key}')" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}"><i data-lucide="${tab.icon}" class="w-5 h-5"></i><span>${tab.label}</span></a>`;
+            }).join('');
+            
+            // For mobile view
+            const selectOptionsHtml = tabs.map(tab => `<option value="${tab.key}" ${state.settingsActiveTab === tab.key ? 'selected' : ''}>${tab.label}</option>`).join('');
+
+            let contentHtml = '';
+            const userProfile = state.candidates.find(c => c.id === state.currentUser.uid) || {};
+
+            switch (state.settingsActiveTab) {
+                case 'profile':
+                    contentHtml = `
+                    <form id="profile-form">
+                        <h2 class="text-2xl font-bold text-slate-800">Public Profile</h2>
+                        <p class="text-slate-500 mt-1 mb-6">This information will be displayed on your public profile.</p>
+                        <div class="space-y-6">
+                             <div>
+                                <label class="block text-sm font-medium text-slate-700">Full Name</label>
+                                <input name="name" type="text" value="${userProfile.name || ''}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Email Address</label>
+                                <input type="email" value="${state.currentUser.email || ''}" disabled class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm bg-slate-50 text-slate-500 cursor-not-allowed">
+                            </div>
+                            <div><label class="block text-sm font-medium text-slate-700">Location</label><input name="location" type="text" value="${userProfile.location || ''}" placeholder="e.g. Pretoria, Gauteng" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-slate-700">Phone Number</label><input name="phone" type="tel" value="${userProfile.phone || ''}" placeholder="e.g., 082 123 4567" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">LinkedIn Profile URL</label>
+                                <input name="linkedin" type="url" value="${userProfile.linkedin || ''}" placeholder="https://linkedin.com/in/your-profile" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                ${userProfile.linkedin ? `<a href="${userProfile.linkedin}" target="_blank" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><i data-lucide="link" class="w-4 h-4"></i>View LinkedIn Profile</a>` : ''}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Portfolio / GitHub URL</label>
+                                <input name="github" type="url" value="${userProfile.github || ''}" placeholder="https://github.com/your-username" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                ${userProfile.github ? `<a href="${userProfile.github}" target="_blank" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><i data-lucide="link" class="w-4 h-4"></i>View GitHub Profile</a>` : ''}
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Experience (years)</label>
+                                    <input name="experience" type="number" value="${userProfile.experience || '0'}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Preferred Job Type</label>
+                                    <select name="jobType" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option ${userProfile.jobType === 'Full-time' ? 'selected' : ''}>Full-time</option>
+                                        <option ${userProfile.jobType === 'Part-time' ? 'selected' : ''}>Part-time</option>
+                                        <option ${userProfile.jobType === 'Contract' ? 'selected' : ''}>Contract</option>
+                                        <option ${userProfile.jobType === 'Internship' ? 'selected' : ''}>Internship</option>
+                                        <option ${userProfile.jobType === 'Hybrid' ? 'selected' : ''}>Hybrid</option>
+                                        <option ${userProfile.jobType === 'Remote' ? 'selected' : ''}>Remote</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-medium text-slate-700">Skills</label><input name="skills" type="text" value="${userProfile.skills || ''}" placeholder="e.g. React, Node.js, Python" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-slate-700">Professional Summary</label><textarea name="summary" rows="4" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${userProfile.summary || ''}</textarea></div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">My CV</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md">
+                                    <div class="space-y-1 text-center">
+                                        <i data-lucide="file-text" class="mx-auto h-12 w-12 text-slate-400"></i>
+                                        <div id="cv-file-info" class="flex text-sm text-slate-600 justify-center">
+                                            <label for="cv-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                                <span id="cv-upload-text">${userProfile.cvFileName ? 'Replace file' : 'Upload a file'}</span>
+                                                <input id="cv-upload" name="cv" type="file" class="sr-only" onchange="handleCvFileSelect(event)">
+                                            </label>
+                                            <p class="pl-1">or drag and drop</p>
+                                        </div>
+                                        <p class="text-xs text-slate-500">PDF up to 10MB</p>
+                                        <p id="cv-file-name" class="text-sm font-medium text-slate-700 pt-2">${userProfile.cvFileName ? `Current: ${userProfile.cvFileName}` : ''}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    `;
+                    break;
+                case 'companyProfile':
+                     contentHtml = `
+                        <h2 class="text-2xl font-bold text-slate-800">Company Profile</h2>
+                        <p class="text-slate-500 mt-1 mb-6">This information will be displayed on your company page and job posts.</p>
+                        <div class="space-y-6">
+                            <div><label class="block text-sm font-medium text-slate-700">Company Name</label><input type="text" value="${state.currentUser.name}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-slate-700">Company Phone</label><input type="tel" value="011 456 7890" placeholder="e.g., 011 456 7890" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-slate-700">Company LinkedIn</label><input type="url" value="https://linkedin.com/company/innovate-inc" placeholder="https://linkedin.com/company/your-company" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-slate-700">Website</label><input type="url" value="https://innovateinc.co.za" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-slate-700">Company Description</label><textarea rows="4" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">Innovate Inc. is a leading technology company...</textarea></div>
+                        </div>
+                    `;
+                    break;
+                case 'account':
+                    contentHtml = `
+                        <h2 class="text-2xl font-bold text-slate-800">Account Settings</h2>
+                        <p class="text-slate-500 mt-1 mb-6">Manage your email and password.</p>
+                        <div class="space-y-6">
+                            <div><label class="block text-sm font-medium text-slate-700">Email Address</label><input type="email" value="${state.currentUser.email}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div class="pt-6 border-t">
+                                <h3 class="text-lg font-medium text-slate-800">Change Password</h3>
+                                <div class="mt-4 space-y-4">
+                                     <div>
+                                        <label class="block text-sm font-medium text-slate-700">Current Password</label>
+                                        <div class="relative mt-1">
+                                            <input id="current-password" type="password" class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                            <button type="button" onclick="togglePasswordVisibility('current-password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                                <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">New Password</label>
+                                        <div class="relative mt-1">
+                                            <input id="new-password" type="password" class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                            <button type="button" onclick="togglePasswordVisibility('new-password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                                <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                 case 'notifications':
+                    contentHtml = `
+                        <h2 class="text-2xl font-bold text-slate-800">Notifications</h2>
+                        <p class="text-slate-500 mt-1 mb-6">Manage how you receive notifications from us.</p>
+                        <div class="space-y-6 divide-y">
+                            <div class="flex items-center justify-between pt-6">
+                                <div><h3 class="text-base font-medium text-slate-800">New Job Alerts</h3><p class="text-sm text-slate-500">Receive an email when a new job matches your criteria.</p></div>
+                                <button type="button" class="bg-indigo-600 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" role="switch" aria-checked="true"><span class="translate-x-5 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span></button>
+                            </div>
+                             <div class="flex items-center justify-between pt-6">
+                                <div><h3 class="text-base font-medium text-slate-800">Application Status Updates</h3><p class="text-sm text-slate-500">Get notified when a recruiter views or updates your application.</p></div>
+                                <button type="button" class="bg-indigo-600 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" role="switch" aria-checked="true"><span class="translate-x-5 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span></button>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'team':
+                     contentHtml = `
+                        <div class="flex items-center justify-between"><h2 class="text-2xl font-bold text-slate-800">Team Members</h2><button class="bg-indigo-600 text-white font-medium px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i>Invite Member</button></div>
+                        <p class="text-slate-500 mt-1 mb-6">Manage who has access to your company account.</p>
+                        <ul class="divide-y">
+                           <li class="py-4 flex items-center justify-between"><div class="font-medium">${state.currentUser.email}</div><span class="text-sm text-slate-500">Admin</span></li>
+                           <li class="py-4 flex items-center justify-between"><div class="font-medium">recruiter@innovateinc.co.za</div><button class="text-sm text-red-600 hover:text-red-800">Remove</button></li>
+                        </ul>
+                    `;
+                    break;
+                case 'billing':
+                     contentHtml = `
+                        <h2 class="text-2xl font-bold text-slate-800">Billing</h2>
+                        <p class="text-slate-500 mt-1 mb-6">Manage your subscription and view payment history.</p>
+                        <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-md mb-6">
+                            <p class="font-medium text-indigo-800">You are currently on the Pro Plan. Your next bill is on 1 November 2025.</p>
+                        </div>
+                        <h3 class="text-lg font-medium text-slate-800 mb-4">Payment History</h3>
+                        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr><th class="p-3 text-left">Date</th><th class="p-3 text-left">Amount</th><th class="p-3 text-right"></th></tr></thead>
+                                <tbody><tr class="border-t"><td class="p-3">1 Oct 2025</td><td class="p-3">R1,499.00</td><td class="p-3 text-right"><a href="#" class="font-medium text-indigo-600">Download</a></td></tr><tr class="border-t"><td class="p-3">1 Sep 2025</td><td class="p-3">R1,499.00</td><td class="p-3 text-right"><a href="#" class="font-medium text-indigo-600">Download</a></td></tr></tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            views.settings.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <h1 class="text-3xl font-bold text-slate-800 mb-8">Settings</h1>
+                    <div class="lg:grid lg:grid-cols-12 lg:gap-8">
+                        <aside class="lg:col-span-3">
+                            <nav class="hidden lg:block space-y-1">${sidebarHtml}</nav>
+                            <div class="lg:hidden mb-4">
+                                <select onchange="handleSettingsTab(this.value)" class="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    ${selectOptionsHtml}
+                                </select>
+                            </div>
+                        </aside>
+                        <div class="lg:col-span-9">
+                            <div class="bg-white rounded-xl border border-slate-200 p-8">
+                                ${contentHtml}
+                                <div class="mt-8 pt-6 border-t flex justify-end">
+                                    <button id="save-settings-btn" class="bg-indigo-600 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Save Changes</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+
+            const saveBtn = document.getElementById('save-settings-btn');
+            if (saveBtn) {
+                 if (state.settingsActiveTab === 'profile') {
+                    saveBtn.onclick = handleUpdateProfile;
+                }
+                // Add other save handlers here if needed
+            }
+        }
+
+        // --- MODAL HANDLING ---
+        function showModal(modalEl) { document.body.classList.add('overflow-hidden'); modalEl.classList.remove('hidden'); setTimeout(() => modalEl.classList.add('active'), 10); }
+        function closeModal(modalId) { 
+            const modalEl = document.getElementById(modalId);
+            if (!modalEl) return;
+            document.body.classList.remove('overflow-hidden'); 
+            modalEl.classList.remove('active'); 
+            setTimeout(() => modalEl.classList.add('hidden'), 300); 
+        }
+        
+        function showLoginModal(type, mode = 'login') {
+            const modalContent = loginModalEl.querySelector('.modal-content');
+            const isLogin = mode === 'login';
+
+            const nameField = isLogin ? '' : `
+                <div>
+                    <label for="name" class="text-sm font-medium text-slate-700">${type === 'seeker' ? 'Full Name' : 'Company Name'}</label>
+                    <input id="name" name="name" type="text" autocomplete="name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+            `;
+            
+            modalContent.innerHTML = `<div class="p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">${type === 'recruiter' ? 'Recruiter' : 'Job Seeker'} ${isLogin ? 'Login' : 'Sign Up'}</h2>
+                    <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                </div>
+                <div id="auth-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 text-sm"></div>
+                <form id="auth-form">
+                    <div class="space-y-4">
+                        ${nameField}
+                        <div>
+                            <label for="email" class="text-sm font-medium text-slate-700">Email address</label>
+                            <input id="email" name="email" type="email" autocomplete="email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="password" class="text-sm font-medium text-slate-700">Password</label>
+                             <div class="relative mt-1">
+                                <input id="password" name="password" type="password" autocomplete="current-password" required class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <button type="button" onclick="togglePasswordVisibility('password')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                    <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    ${isLogin ? `<div class="flex items-center justify-end mt-4">
+                        <div class="text-sm">
+                            <a href="#" onclick="showForgotPassword('${type}')" class="font-medium text-indigo-600 hover:text-indigo-500">Forgot your password?</a>
+                        </div>
+                    </div>` : ''}
+                    <div class="mt-6">
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">${isLogin ? 'Sign in' : 'Create Account'}</button>
+                    </div>
+                    <p class="mt-4 text-center text-sm text-slate-500">
+                        ${isLogin ? 'Not a member?' : 'Already have an account?'}
+                        <a href="#" onclick="showLoginModal('${type}', '${isLogin ? 'signup' : 'login'}')" class="font-medium text-indigo-600 hover:text-indigo-500">${isLogin ? 'Sign up here' : 'Sign in'}</a>
+                    </p>
+                </form>
+            </div>`;
+
+            const form = modalContent.querySelector('#auth-form');
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                if (isLogin) {
+                    handleLogin(event, type);
+                } else {
+                    handleSignUp(event, type);
+                }
+            });
+            lucide.createIcons();
+            showModal(loginModalEl);
+        }
+
+        function showJobDetails(jobId) {
+            const job = state.jobs.find(j => j.id === jobId);
+            if (!job) return;
+            const modalContent = jobDetailsModalEl.querySelector('.modal-content');
+            const reportButtonHtml = `<div class="p-6 text-center text-xs text-slate-400">
+                <a href="#" onclick="showReportJobModal('${job.id}')" class="hover:text-red-600 hover:underline">Report this job</a>
+            </div>`;
+            const closingDateDetails = job.closingDate ? `Closes ${job.closingDate.toDate().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}` : '';
+            modalContent.innerHTML = `<div class="p-8 border-b"><div class="flex justify-between items-start"><div><h2 class="text-2xl font-bold text-slate-800">${job.title}</h2><p class="text-slate-600 font-medium mt-1">${job.company} - <span class="text-slate-500 font-normal">${job.location}</span></p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p></div><button onclick="closeModal('job-details-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button></div></div><div class="p-8 overflow-y-auto"><h3 class="font-bold text-slate-800 mb-2">Job Description</h3><p class="text-slate-600 whitespace-pre-wrap">${job.description}</p></div><div class="p-6 bg-slate-50 border-t mt-auto"><button onclick="handleApply('${job.id}')" class="w-full bg-indigo-600 text-white font-medium py-3 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Apply Now</button></div>${reportButtonHtml}`;
+            lucide.createIcons();
+            showModal(jobDetailsModalEl);
+        }
+
+        function showApplicantsModal(jobId) {
+            const job = state.jobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const applicationsForJob = state.applications.filter(app => app.jobId === jobId);
+            const applicants = applicationsForJob.map(app => {
+                const candidate = state.candidates.find(c => c.id === app.candidateId);
+                 // Add user data as fallback
+                const user = state.allUsers[app.candidateId];
+                return { ...candidate, ...user, id: app.candidateId, status: app.status };
+            }).filter(Boolean);
+
+            const applicantListHtml = applicants.map(candidate => { 
+                return `<tr class="hover:bg-slate-50">
+                    <td class="p-4 font-medium text-slate-800">${candidate.name}</td>
+                    <td class="p-4 text-slate-600">${candidate.email || 'Not provided'}</td>
+                    <td class="p-4 text-slate-500">${candidate.skills || ''}</td>
+                    <td class="p-4"><span class="status-badge status-${candidate.status}">${candidate.status}</span></td>
+                    <td class="p-4 text-right"><button onclick="showCandidateDetails('${candidate.id}')" class="text-indigo-600 hover:text-indigo-800 font-medium">View Profile</button></td>
+                </tr>`; 
+            }).join('');
+            const modalContent = applicantsModalEl.querySelector('.modal-content');
+            modalContent.innerHTML = `<div class="p-6 border-b flex justify-between items-center"><div><h2 class="text-xl font-bold text-slate-800">Applicants for ${job.title}</h2><p class="text-sm text-slate-500">${applicants.length} total applicants</p></div><button onclick="closeModal('applicants-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button></div><div class="overflow-y-auto"><table class="w-full text-sm text-left"><thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider sticky top-0"><tr><th class="p-4">Name</th><th class="p-4">Email</th><th class="p-4">Top Skills</th><th class="p-4">Status</th><th class="p-4"></th></tr></thead><tbody>${applicantListHtml}</tbody></table>${applicants.length === 0 ? `<div class="text-center p-8 text-slate-500">No applicants for this position yet.</div>` : ''}</div>`;
+            lucide.createIcons();
+            showModal(applicantsModalEl);
+        }
+
+        function showForgotPassword(type) {
+            const modalContent = loginModalEl.querySelector('.modal-content');
+            modalContent.innerHTML = `<div class="p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">Reset Password</h2>
+                    <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                </div>
+                <div id="auth-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 text-sm"></div>
+                <p class="text-slate-600 text-sm mb-4">Enter your email address and we will send you a link to reset your password.</p>
+                <form onsubmit="handlePasswordReset(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="reset-email" class="text-sm font-medium text-slate-700">Email address</label>
+                            <input id="reset-email" name="email" type="email" autocomplete="email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Send Reset Link</button>
+                    </div>
+                    <p class="mt-4 text-center text-sm text-slate-500">
+                        <a href="#" onclick="showLoginModal('${type}', 'login')" class="font-medium text-indigo-600 hover:text-indigo-500">Back to Login</a>
+                    </p>
+                </form>
+            </div>`;
+        }
+
+        async function handlePasswordReset(event) {
+            event.preventDefault();
+            const email = event.target.email.value;
+            const modalContent = loginModalEl.querySelector('.modal-content');
+            const errorDiv = modalContent.querySelector('#auth-error');
+            const submitButton = event.target.querySelector('button[type="submit"]');
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                modalContent.innerHTML = `<div class="p-8 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100">
+                        <i data-lucide="check" class="h-6 w-6 text-emerald-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mt-4">Check Your Email</h2>
+                    <p class="text-slate-600 text-sm my-4">We've sent a password reset link to ${email}.</p>
+                    <button onclick="closeModal('login-modal')" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Close</button>
+                </div>`;
+                lucide.createIcons();
+            } catch (error) {
+                if (error.code === 'auth/too-many-requests') {
+                    startAuthLockoutTimer(30, submitButton, errorDiv, 'Send Reset Link');
+                } else if (errorDiv) {
+                    errorDiv.textContent = error.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            }
+        }
+        
+        // --- AUTHENTICATION & MENU ---
+        async function handleLogin(event) {
+            const email = event.target.email.value;
+            const password = event.target.password.value;
+            const errorDiv = document.getElementById('auth-error');
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                closeModal('login-modal');
+            } catch (error) {
+                 if (error.code === 'auth/too-many-requests') {
+                    startAuthLockoutTimer(30, submitButton, errorDiv, 'Sign in');
+                } else if (error.code === 'auth/invalid-credential') {
+                    errorDiv.textContent = 'Invalid email or password. Please check your credentials and try again.';
+                    errorDiv.classList.remove('hidden');
+                } else {
+                    errorDiv.textContent = error.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            }
+        }
+
+        async function handleSignUp(event, type) {
+            const name = event.target.name.value;
+            const email = event.target.email.value;
+            const password = event.target.password.value;
+            const errorDiv = document.getElementById('auth-error');
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Create user document in Firestore
+                await setDoc(doc(db, "users", user.uid), {
+                    name: name,
+                    email: email,
+                    type: type,
+                    savedJobs: []
+                });
+
+                if (type === 'seeker') {
+                    // Create profile document in Firestore
+                    await setDoc(doc(db, "profiles", user.uid), {
+                        name: name,
+                        email: email,
+                        skills: '',
+                        experience: '0',
+                        location: '',
+                        jobType: 'Full-time',
+                        phone: '',
+                        linkedin: '',
+                        github: '',
+                        summary: 'A passionate job seeker ready for new opportunities.',
+                        workExperience: [],
+                        education: [],
+                        projects: [],
+                        cvFileName: ''
+                    });
+                }
+                
+                sendWelcomeEmail(name, email, type);
+                closeModal('login-modal');
+            } catch (error) {
+                 if (error.code === 'auth/too-many-requests') {
+                    startAuthLockoutTimer(30, submitButton, errorDiv, 'Create Account');
+                } else {
+                    errorDiv.textContent = error.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            }
+        }
+        
+        async function handleUpdateProfile() {
+            if (!state.currentUser) return;
+
+            const profileForm = document.getElementById('profile-form');
+            if (!profileForm) return;
+
+            const formData = new FormData(profileForm);
+            const updatedProfile = {
+                name: formData.get('name'),
+                location: formData.get('location'),
+                phone: formData.get('phone'),
+                linkedin: formData.get('linkedin'),
+                github: formData.get('github'),
+                skills: formData.get('skills'),
+                experience: formData.get('experience'),
+                summary: formData.get('summary'),
+                jobType: formData.get('jobType'),
+            };
+
+            if (state.selectedCvFile) {
+                // In a real app, upload state.selectedCvFile to Firebase Storage here.
+                // For simulation, we'll just use its name.
+                updatedProfile.cvFileName = state.selectedCvFile.name;
+                console.log(`Simulating upload of ${state.selectedCvFile.name}`);
+            }
+
+            const profileDocRef = doc(db, "profiles", state.currentUser.uid);
+            try {
+                await setDoc(profileDocRef, updatedProfile, { merge: true });
+                state.selectedCvFile = null; // Reset after save
+                showConfirmationModal("Profile Updated", "Your profile has been successfully updated.", () => closeModal('confirmation-modal'), true, false, false);
+            } catch (error) {
+                console.error("Error updating profile: ", error);
+                showConfirmationModal("Update Failed", "There was an error updating your profile.", () => closeModal('confirmation-modal'), false, true, false);
+            }
+        }
+
+        function startAuthLockoutTimer(duration, button, errorDiv, originalText) {
+            if (state.authLockoutActive) return;
+            state.authLockoutActive = true;
+            
+            button.disabled = true;
+            let timeLeft = duration;
+
+            const timerInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    button.disabled = false;
+                    errorDiv.classList.add('hidden');
+                    errorDiv.textContent = '';
+                    state.authLockoutActive = false;
+                    button.innerHTML = originalText;
+                } else {
+                    const message = `For security, access has been temporarily blocked due to too many failed attempts. Please try again in ${timeLeft} seconds.`;
+                    errorDiv.textContent = message;
+                    errorDiv.classList.remove('hidden');
+                    button.innerHTML = `<span class="flex items-center justify-center gap-2"><i data-lucide="timer" class="w-4 h-4 animate-spin"></i><span>Try again in ${timeLeft}s</span></span>`;
+                    lucide.createIcons(); // Re-render icon
+                    timeLeft--;
+                }
+            }, 1000);
+        }
+
+        function sendWelcomeEmail(name, email, type) {
+            console.log(`%c📧 Sending welcome email to ${name} (${email})...`, 'color: #10b981;');
+            
+            const subject = "Welcome to JobAccess!";
+            let body = `Hi ${name},\n\nWelcome to JobAccess! We're thrilled to have you join our community.`;
+
+            if (type === 'seeker') {
+                body += `\n\nYour journey to finding your next big opportunity starts now. You can start by searching for jobs or completing your profile to attract top recruiters.\n\nBest of luck!`;
+            } else {
+                body += `\n\nYour journey to finding the best talent starts now. You can start by posting a job or searching our CV database to find your next great hire.\n\nHappy recruiting!`;
+            }
+
+            body += `\n\nRegards,\nThe JobAccess Team`;
+
+            console.log(`%c--- Email Content ---`, 'font-weight: bold;');
+            console.log(`To: ${email}`);
+            console.log(`Subject: ${subject}`);
+            console.log(body);
+            console.log(`%c---------------------`, 'font-weight: bold;');
+            console.log('%c✅ Email sent (simulation).', 'color: #10b981;');
+        }
+
+        function handleLogout() {
+            signOut(auth);
+        }
+
+        function toggleUserDropdown() { document.getElementById('user-dropdown').classList.toggle('hidden'); }
+        function toggleLoginDropdown() { document.getElementById('login-dropdown').classList.toggle('hidden'); }
+        
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const openIcon = document.getElementById('mobile-menu-open-icon');
+            const closeIcon = document.getElementById('mobile-menu-close-icon');
+            menu.classList.toggle('hidden');
+            openIcon.classList.toggle('hidden');
+            closeIcon.classList.toggle('hidden');
+        }
+        
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.nextElementSibling.querySelector('i');
+            if (input.type === "password") {
+                input.type = "text";
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = "password";
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        }
+
+        function handleCvFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            state.selectedCvFile = file; // Store the file object
+
+            const fileNameEl = document.getElementById('cv-file-name');
+            const uploadTextEl = document.getElementById('cv-upload-text');
+            
+            if (fileNameEl) {
+                fileNameEl.textContent = `New file: ${file.name}`;
+            }
+            if (uploadTextEl) {
+                uploadTextEl.textContent = 'Replace file';
+            }
+        }
+
+        function showPostJobModal() {
+            const modalContent = postJobModalEl.querySelector('.modal-content');
+            const today = getSimulatedNow().toISOString().split('T')[0];
+            modalContent.innerHTML = `
+                <form id="post-job-form">
+                    <div class="p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-slate-800">Post a New Job</h2>
+                            <button type="button" onclick="closeModal('post-job-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                        </div>
+                    </div>
+                    <div class="p-8 overflow-y-auto">
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex justify-between items-center">
+                                    <label for="job-title" class="block text-sm font-medium text-slate-700">Job Title</label>
+                                    <button type="button" onclick="generateJobDescription()" class="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                                        <i data-lucide="sparkles" class="w-3 h-3"></i>
+                                        <span>Generate with AI</span>
+                                    </button>
+                                </div>
+                                <input type="text" id="job-title" name="title" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="job-city" class="block text-sm font-medium text-slate-700">City</label>
+                                    <input type="text" id="job-city" name="city" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label for="job-province" class="block text-sm font-medium text-slate-700">Province</label>
+                                    <select id="job-province" name="province" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option>Eastern Cape</option>
+                                        <option>Free State</option>
+                                        <option selected>Gauteng</option>
+                                        <option>KwaZulu-Natal</option>
+                                        <option>Limpopo</option>
+                                        <option>Mpumalanga</option>
+                                        <option>North West</option>
+                                        <option>Northern Cape</option>
+                                        <option>Western Cape</option>
+                                    </select>
+                                </div>
+                            </div>
+                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="job-type" class="block text-sm font-medium text-slate-700">Job Type</label>
+                                    <select id="job-type" name="type" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option>Full-time</option>
+                                        <option>Part-time</option>
+                                        <option>Contract</option>
+                                        <option>Internship</option>
+                                        <option>Hybrid</option>
+                                        <option>Remote</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="job-closing-date" class="block text-sm font-medium text-slate-700">Closing Date</label>
+                                    <input type="date" id="job-closing-date" name="closingDate" required min="${today}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                            </div>
+                             <div>
+                                <label for="job-salary" class="block text-sm font-medium text-slate-700">Salary Range (Optional)</label>
+                                <input type="text" id="job-salary" name="salary" placeholder="e.g., R30,000 - R40,000 per month" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="job-description" class="block text-sm font-medium text-slate-700">Job Description</label>
+                                <textarea id="job-description" name="description" rows="8" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 bg-slate-50 border-t mt-auto flex justify-end">
+                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Post Job</button>
+                    </div>
+                </form>
+            `;
+             const form = modalContent.querySelector('#post-job-form');
+             form.addEventListener('submit', handlePostJob);
+            lucide.createIcons();
+            showModal(postJobModalEl);
+        }
+
+        function showEditJobModal(jobId) {
+            const job = state.jobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const [city, province] = job.location.split(', ');
+            const provinces = ["Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo", "Mpumalanga", "North West", "Northern Cape", "Western Cape"];
+            const provinceOptions = provinces.map(p => `<option ${p === province ? 'selected' : ''}>${p}</option>`).join('');
+            const jobTypes = ["Full-time", "Part-time", "Contract", "Internship", "Hybrid", "Remote"];
+            const typeOptions = jobTypes.map(t => `<option ${t === job.type ? 'selected' : ''}>${t}</option>`).join('');
+            const today = getSimulatedNow().toISOString().split('T')[0];
+            const closingDateValue = job.closingDate ? job.closingDate.toDate().toISOString().split('T')[0] : '';
+
+
+            const modalContent = postJobModalEl.querySelector('.modal-content');
+            modalContent.innerHTML = `
+                <form id="edit-job-form">
+                    <div class="p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-slate-800">Edit Job Post</h2>
+                            <button type="button" onclick="closeModal('post-job-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                        </div>
+                    </div>
+                    <div class="p-8 overflow-y-auto">
+                        <div class="space-y-6">
+                             <div>
+                                <label for="job-title" class="block text-sm font-medium text-slate-700">Job Title</label>
+                                <input type="text" id="job-title" name="title" value="${job.title}" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="job-city" class="block text-sm font-medium text-slate-700">City</label>
+                                    <input type="text" id="job-city" name="city" value="${city}" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label for="job-province" class="block text-sm font-medium text-slate-700">Province</label>
+                                    <select id="job-province" name="province" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        ${provinceOptions}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="job-type" class="block text-sm font-medium text-slate-700">Job Type</label>
+                                    <select id="job-type" name="type" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        ${typeOptions}
+                                    </select>
+                                </div>
+                                 <div>
+                                    <label for="job-closing-date" class="block text-sm font-medium text-slate-700">Closing Date</label>
+                                    <input type="date" id="job-closing-date" name="closingDate" value="${closingDateValue}" required min="${today}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                            </div>
+                             <div>
+                                <label for="job-salary" class="block text-sm font-medium text-slate-700">Salary Range (Optional)</label>
+                                <input type="text" id="job-salary" name="salary" value="${job.salary || ''}" placeholder="e.g., R30,000 - R40,000 per month" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="job-description" class="block text-sm font-medium text-slate-700">Job Description</label>
+                                <textarea id="job-description" name="description" rows="8" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${job.description}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 bg-slate-50 border-t mt-auto flex justify-end">
+                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Save Changes</button>
+                    </div>
+                </form>
+            `;
+            const form = modalContent.querySelector('#edit-job-form');
+            form.addEventListener('submit', (event) => handleUpdateJob(event, jobId));
+            lucide.createIcons();
+            showModal(postJobModalEl);
+        }
+
+        async function handleUpdateJob(event, jobId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const city = formData.get('city');
+            const province = formData.get('province');
+            
+            const updatedData = {
+                title: formData.get('title'),
+                location: `${city}, ${province}`,
+                type: formData.get('type'),
+                description: formData.get('description'),
+                closingDate: Timestamp.fromDate(new Date(formData.get('closingDate'))),
+                salary: formData.get('salary') || ''
+            };
+
+            const jobDocRef = doc(db, "jobs", jobId);
+            try {
+                await updateDoc(jobDocRef, updatedData);
+                console.log("Job updated successfully");
+                closeModal('post-job-modal');
+            } catch (error) {
+                console.error("Error updating job: ", error);
+                alert("Failed to update job. Please try again.");
+            }
+        }
+
+        async function generateJobDescription() {
+            const jobTitleInput = document.getElementById('job-title');
+            const jobDescriptionTextarea = document.getElementById('job-description');
+            const jobTitle = jobTitleInput.value;
+
+            if (!jobTitle.trim()) {
+                alert("Please enter a job title first.");
+                return;
+            }
+
+            // Show loading state
+            jobDescriptionTextarea.value = "✨ Generating job description, please wait...";
+            jobDescriptionTextarea.disabled = true;
+
+            const apiKey = ""; // API key is handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const systemPrompt = "You are an expert HR professional in South Africa. Your task is to write a clear, concise, and engaging job description.";
+            const userQuery = `Write a detailed job description for a "${jobTitle}" position based in South Africa. The description should include the following sections: Key Responsibilities, Qualifications and Experience, and Desired Skills. The tone should be professional and appealing to potential candidates.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    jobDescriptionTextarea.value = candidate.content.parts[0].text;
+                } else {
+                    jobDescriptionTextarea.value = "Sorry, I couldn't generate a description for that title. Please write one manually.";
+                }
+            } catch (error) {
+                console.error("Error generating job description:", error);
+                jobDescriptionTextarea.value = "An error occurred while generating the description. Please check the console and try again, or write one manually.";
+            } finally {
+                jobDescriptionTextarea.disabled = false;
+            }
+        }
+
+        async function handlePostJob(event) {
+            event.preventDefault();
+            if (!state.currentUser || state.currentUser.type !== 'recruiter') {
+                alert("You must be logged in as a recruiter to post a job.");
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const city = formData.get('city');
+            const province = formData.get('province');
+            const newJob = {
+                title: formData.get('title'),
+                location: `${city}, ${province}`,
+                type: formData.get('type'),
+                description: formData.get('description'),
+                company: state.currentUser.name, // Use recruiter's company name
+                recruiterId: state.currentUser.uid,
+                postedDate: Timestamp.fromDate(getSimulatedNow()),
+                closingDate: Timestamp.fromDate(new Date(formData.get('closingDate'))),
+                salary: formData.get('salary') || ''
+            };
+
+            try {
+                const docRef = await addDoc(collection(db, "jobs"), newJob);
+                console.log("Job posted with ID: ", docRef.id);
+                closeModal('post-job-modal');
+                // The onSnapshot listener will automatically update the UI
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                alert("There was an error posting your job. Please try again.");
+            }
+        }
+
+        function showDeleteConfirmation(jobId) {
+            const job = state.jobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const modalContent = confirmationModalEl.querySelector('.modal-content');
+            modalContent.innerHTML = `
+                <div class="p-8">
+                    <div class="text-center">
+                        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                            <i data-lucide="trash-2" class="h-6 w-6 text-red-600"></i>
+                        </div>
+                        <h3 class="mt-5 text-lg font-medium text-gray-900">Delete Job Post</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">
+                                Are you sure you want to delete the job post for <strong class="text-slate-700">${job.title}</strong>? This action cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-2xl">
+                    <button type="button" id="confirm-delete-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        Delete
+                    </button>
+                    <button type="button" onclick="closeModal('confirmation-modal')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            `;
+            modalContent.querySelector('#confirm-delete-btn').onclick = () => handleDeleteJob(jobId);
+            lucide.createIcons();
+            showModal(confirmationModalEl);
+        }
+
+        async function handleDeleteJob(jobId) {
+             const jobDocRef = doc(db, "jobs", jobId);
+            try {
+                await deleteDoc(jobDocRef);
+                console.log("Job deleted successfully");
+
+                // If the deleted job was the selected one, select the first job in the list
+                if(state.selectedJobId === jobId) {
+                    state.selectedJobId = state.jobs.length > 0 ? state.jobs[0].id : null;
+                }
+
+                closeModal('confirmation-modal');
+                // UI will update automatically via the onSnapshot listener
+            } catch(error) {
+                console.error("Error deleting job: ", error);
+                alert("Failed to delete job. Please try again.");
+                closeModal('confirmation-modal');
+            }
+        }
+        
+        function showReportJobModal(jobId) {
+            const job = state.jobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const modalContent = reportJobModalEl.querySelector('.modal-content');
+            modalContent.innerHTML = `
+                <form id="report-job-form">
+                     <div class="p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-slate-800">Report Job Posting</h2>
+                            <button type="button" onclick="closeModal('report-job-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <p class="text-sm text-slate-600 mb-4">You are reporting the job: <strong class="text-slate-800">${job.title}</strong> posted by <strong class="text-slate-800">${job.company}</strong>.</p>
+                         <div class="space-y-6">
+                            <div>
+                                <label for="report-reason" class="block text-sm font-medium text-slate-700">Reason</label>
+                                <select id="report-reason" name="reason" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option>Spam or Scam</option>
+                                    <option>Incorrect Information</option>
+                                    <option>Discriminatory Content</option>
+                                    <option>Offensive Content</option>
+                                    <option>Broken Link or Application</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                             <div>
+                                <label for="report-comments" class="block text-sm font-medium text-slate-700">Additional Comments (Optional)</label>
+                                <textarea id="report-comments" name="comments" rows="4" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="p-6 bg-slate-50 border-t mt-auto flex justify-end">
+                        <button type="submit" class="w-full sm:w-auto bg-red-600 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-red-700 transition-colors">Submit Report</button>
+                    </div>
+                </form>
+            `;
+            
+            const form = modalContent.querySelector('#report-job-form');
+            form.addEventListener('submit', (event) => handleReportJob(event, jobId));
+            showModal(reportJobModalEl);
+        }
+
+        async function handleReportJob(event, jobId) {
+            event.preventDefault();
+            if(!state.currentUser) {
+                alert("You must be logged in to report a job.");
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const reportData = {
+                jobId: jobId,
+                reason: formData.get('reason'),
+                comments: formData.get('comments'),
+                reporterId: state.currentUser.uid,
+                reporterEmail: state.currentUser.email,
+                reportedDate: Timestamp.now()
+            };
+
+            try {
+                await addDoc(collection(db, "reports"), reportData);
+                const modalContent = reportJobModalEl.querySelector('.modal-content');
+                modalContent.innerHTML = `
+                    <div class="p-8 text-center">
+                        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100">
+                            <i data-lucide="check" class="h-6 w-6 text-emerald-600"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-800 mt-4">Report Submitted</h2>
+                        <p class="text-slate-600 text-sm my-4">Thank you for helping us maintain the quality of our job listings. Our team will review your report shortly.</p>
+                        <button type="button" onclick="closeModal('report-job-modal')" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Close</button>
+                    </div>`;
+                lucide.createIcons();
+
+            } catch(error) {
+                console.error("Error submitting report:", error);
+                alert("There was an error submitting your report. Please try again.");
+            }
+
+        }
+        
+        async function handleSaveJob(jobId) {
+            if (!state.currentUser) {
+                showLoginModal('seeker', 'login');
+                return;
+            }
+
+            const userDocRef = doc(db, "users", state.currentUser.uid);
+            const isSaved = state.savedJobs.includes(jobId);
+
+            let updatedSavedJobs;
+            if (isSaved) {
+                updatedSavedJobs = state.savedJobs.filter(id => id !== jobId);
+            } else {
+                updatedSavedJobs = [...state.savedJobs, jobId];
+            }
+            
+            try {
+                await updateDoc(userDocRef, {
+                    savedJobs: updatedSavedJobs
+                });
+                // The onSnapshot listener for the user will update the state
+            } catch (error) {
+                console.error("Error updating saved jobs: ", error);
+                alert("Could not save job. Please try again.");
+            }
+        }
+        
+        function timeAgo(date) {
+            if (!date) return '';
+            if (typeof date.toDate !== 'function') {
+                return '';
+            }
+            const now = getSimulatedNow();
+            const seconds = Math.floor((now - date.toDate()) / 1000);
+
+            let interval = seconds / 31536000;
+            if (interval > 1) {
+                const years = Math.floor(interval);
+                return `Posted ${years} year${years > 1 ? 's' : ''} ago`;
+            }
+            interval = seconds / 2592000;
+            if (interval > 1) {
+                const months = Math.floor(interval);
+                return `Posted ${months} month${months > 1 ? 's' : ''} ago`;
+            }
+            interval = seconds / 86400;
+            if (interval > 1) {
+                const days = Math.floor(interval);
+                if (days === 1) return "Posted yesterday";
+                return `Posted ${days} days ago`;
+            }
+            interval = seconds / 3600;
+            if (interval > 1) {
+                const hours = Math.floor(interval);
+                return `Posted ${hours} hour${hours > 1 ? 's' : ''} ago`;
+            }
+            interval = seconds / 60;
+            if (interval > 1) {
+                const minutes = Math.floor(interval);
+                return `Posted ${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            }
+            return "Posted just now";
+        }
+
+        // --- CV DATABASE FUNCTIONS ---
+        async function handleDownloadProfilePdf(candidateId) {
+            const candidate = state.candidates.find(c => c.id === candidateId);
+            if (!candidate) return;
+
+            console.log(`Simulating PDF profile download for ${candidate.name}`);
+
+            const userEmail = candidate.email || state.allUsers[candidate.id]?.email || 'N/A';
+            
+            const dummyPdfContent = `
+                PROFILE: ${candidate.name}
+                ============================================
+
+                CONTACT
+                --------------------
+                Email: ${userEmail}
+                Phone: ${candidate.phone || 'N/A'}
+                Location: ${candidate.location || 'N/A'}
+                LinkedIn: ${candidate.linkedin || 'N/A'}
+                GitHub: ${candidate.github || 'N/A'}
+
+                SUMMARY
+                --------
+                ${candidate.summary || 'No summary provided.'}
+
+                SKILLS
+                -------
+                ${candidate.skills || 'No skills listed.'}
+
+                EXPERIENCE
+                -----------
+                ${candidate.experience || '0'} years
+
+                ---
+                This is a simulated PDF profile generated by JobAccess. For a real implementation, a library like jsPDF would be used.
+            `;
+
+            const blob = new Blob([dummyPdfContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Profile_${candidate.name.replace(/\s/g, '_')}.txt`; // Simulating PDF with .txt
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function handleDownloadCv(candidateId) {
+            const candidate = state.candidates.find(c => c.id === candidateId);
+            if (!candidate || !candidate.cvFileName) {
+                showConfirmationModal(
+                    "No CV Found",
+                    "This candidate has not uploaded a CV yet.",
+                    () => closeModal('confirmation-modal'),
+                    false, // not success
+                    true,  // is error
+                    false  // no cancel button
+                );
+                return;
+            }
+
+            // In a real app, you would get a download URL from Firebase Storage.
+            // For this simulation, we'll create a dummy file and trigger a download.
+            console.log(`Simulating download for actual CV file: ${candidate.cvFileName}`);
+            
+            const dummyFileContent = `This is a simulation of downloading the CV file named "${candidate.cvFileName}".`;
+
+            const blob = new Blob([dummyFileContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = candidate.cvFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function showCandidateDetails(candidateId) {
+            const candidate = state.candidates.find(c => c.id === candidateId);
+            if (!candidate) return;
+            
+            // Get email from the allUsers object as a fallback
+            const userEmail = state.allUsers[candidateId]?.email;
+
+            const modalContent = candidateDetailsModalEl.querySelector('.modal-content');
+            modalContent.innerHTML = `
+                <div class="p-6 border-b flex justify-between items-start">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 text-2xl">${candidate.name.charAt(0)}</div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800">${candidate.name}</h2>
+                            <p class="text-slate-500">${candidate.location || 'Location not specified'}</p>
+                            <p class="text-sm text-slate-500 mt-1">${candidate.jobType || ''} &bull; ${candidate.experience || '0'} years experience</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('candidate-details-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                </div>
+                <div class="p-8 overflow-y-auto">
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Contact Information</h3>
+                             <div class="space-y-2">
+                                <p class="text-slate-600 flex items-center gap-2"><i data-lucide="mail" class="w-4 h-4 text-slate-400 flex-shrink-0"></i><span>${candidate.email || userEmail || 'Email not provided'}</span></p>
+                                <p class="text-slate-600 flex items-center gap-2"><i data-lucide="phone" class="w-4 h-4 text-slate-400 flex-shrink-0"></i><span>${candidate.phone || 'Phone not provided'}</span></p>
+                            </div>
+                        </div>
+                         <div>
+                            <h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Online Presence</h3>
+                             <div class="flex flex-col space-y-2">
+                                ${candidate.linkedin ? `<a href="${candidate.linkedin}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-2">
+                                    <i data-lucide="linkedin" class="w-4 h-4"></i>
+                                    <span>LinkedIn Profile</span>
+                                </a>` : ''}
+                                ${candidate.github ? `
+                                <a href="${candidate.github}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-2">
+                                    <i data-lucide="github" class="w-4 h-4"></i>
+                                    <span>GitHub Profile</span>
+                                </a>` : ''}
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Top Skills</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${candidate.skills ? candidate.skills.split(', ').map(skill => `<span class="bg-indigo-100 text-indigo-700 text-sm font-medium px-3 py-1 rounded-full">${skill}</span>`).join('') : '<p class="text-sm text-slate-500">No skills listed.</p>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 bg-slate-50 border-t mt-auto flex flex-wrap items-center justify-start gap-3">
+                     <div>
+                        <button onclick="handleDownloadProfilePdf('${candidate.id}')" class="text-slate-700 bg-slate-200 hover:bg-slate-300 font-medium py-2 px-4 rounded-lg shadow-sm transition-colors text-sm">Download Profile (PDF)</button>
+                        <button onclick="handleDownloadCv('${candidate.id}')" class="ml-2 text-slate-700 bg-slate-200 hover:bg-slate-300 font-medium py-2 px-4 rounded-lg shadow-sm transition-colors text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" ${!candidate.cvFileName ? 'disabled' : ''}>Download CV</button>
+                     </div>
+                </div>
+            `;
+            lucide.createIcons();
+            showModal(candidateDetailsModalEl);
+        }
+
+        function showCvFilterModal() {
+            const modalContent = cvFilterModalEl.querySelector('.modal-content');
+            const jobTypes = ["Full-time", "Part-time", "Contract", "Internship", "Hybrid", "Remote"];
+            const jobTypeCheckboxes = jobTypes.map(type => `
+                <div class="flex items-center">
+                    <input id="type-${type.toLowerCase()}" name="jobType" value="${type}" type="checkbox" ${state.cvFilters.jobType.includes(type) ? 'checked' : ''} onchange="handleCvFilterChange(event)" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="type-${type.toLowerCase()}" class="ml-3 text-sm text-gray-600">${type}</label>
+                </div>
+            `).join('');
+
+            modalContent.innerHTML = `
+                <div class="p-6 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-800">Filter Candidates</h2>
+                        <button type="button" onclick="closeModal('cv-filter-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+                    </div>
+                </div>
+                <div class="p-8 space-y-6">
+                     <div>
+                        <label for="filter-skills" class="block text-sm font-medium text-slate-700">Skills</label>
+                        <input type="text" id="filter-skills" name="skills" value="${state.cvFilters.skills}" oninput="handleCvFilterChange(event)" placeholder="e.g., React, Node.js" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="filter-experience" class="block text-sm font-medium text-slate-700">Minimum Experience</label>
+                        <select id="filter-experience" name="experience" onchange="handleCvFilterChange(event)" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="any" ${state.cvFilters.experience === 'any' ? 'selected' : ''}>Any</option>
+                            <option value="1" ${state.cvFilters.experience === '1' ? 'selected' : ''}>1+ years</option>
+                            <option value="3" ${state.cvFilters.experience === '3' ? 'selected' : ''}>3+ years</option>
+                            <option value="5" ${state.cvFilters.experience === '5' ? 'selected' : ''}>5+ years</option>
+                            <option value="10" ${state.cvFilters.experience === '10' ? 'selected' : ''}>10+ years</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium text-slate-700">Job Type</label>
+                        <div class="mt-2 grid grid-cols-2 gap-2">
+                           ${jobTypeCheckboxes}
+                        </div>
+                    </div>
+                    <div>
+                        <label for="filter-location" class="block text-sm font-medium text-slate-700">Location</label>
+                        <input type="text" id="filter-location" name="location" value="${state.cvFilters.location}" oninput="handleCvFilterChange(event)" placeholder="e.g., Cape Town" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+                <div class="p-6 bg-slate-50 border-t mt-auto flex justify-end">
+                    <button type="button" onclick="applyCvFilters()" class="w-full sm:w-auto bg-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Apply Filters</button>
+                </div>
+            `;
+            showModal(cvFilterModalEl);
+        }
+
+        function handleCvFilterChange(event) {
+            const { name, value, type, checked } = event.target;
+            if (type === 'checkbox') {
+                if(checked) {
+                    state.cvFilters.jobType.push(value);
+                } else {
+                    state.cvFilters.jobType = state.cvFilters.jobType.filter(item => item !== value);
+                }
+            } else {
+                state.cvFilters[name] = value;
+            }
+        }
+
+        function applyCvFilters() {
+            closeModal('cv-filter-modal');
+            renderCvDatabasePage();
+        }
+
+        async function handleApply(jobId) {
+            if (!state.currentUser || state.currentUser.type !== 'seeker') {
+                showLoginModal('seeker', 'login');
+                return;
+            }
+            
+            const job = state.jobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const hasApplied = state.applications.some(app => app.jobId === jobId);
+            if (hasApplied) {
+                console.log("Already applied for this job.");
+                return;
+            }
+
+            showConfirmationModal(
+                "Confirm Application",
+                `Are you sure you want to apply for ${job.title}?`,
+                async () => {
+                    try {
+                        const newApplication = {
+                            jobId: jobId,
+                            candidateId: state.currentUser.uid,
+                            appliedDate: Timestamp.fromDate(getSimulatedNow()),
+                            status: 'applied'
+                        };
+                        await addDoc(collection(db, "applications"), newApplication);
+                        showConfirmationModal(
+                            "Application Sent!",
+                            "Your application has been successfully submitted.",
+                            () => closeModal('confirmation-modal'),
+                            true, // is success
+                            false, // is error
+                            false // no cancel button
+                        );
+                    } catch (e) {
+                        console.error("Error submitting application: ", e);
+                        showConfirmationModal(
+                            "Application Failed",
+                            "There was an error submitting your application. Please try again.",
+                            () => closeModal('confirmation-modal'),
+                            false, // not success
+                            true, // is error
+                            false // no cancel button
+                        );
+                    }
+                }
+            );
+        }
+
+        function showConfirmationModal(title, message, onConfirm, isSuccess = false, isError = false, showCancel = true) {
+            const modalContent = confirmationModalEl.querySelector('.modal-content');
+            let iconHtml = '';
+            if (isSuccess) {
+                iconHtml = `<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100"><i data-lucide="check" class="h-6 w-6 text-emerald-600"></i></div>`;
+            } else if (isError) {
+                iconHtml = `<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100"><i data-lucide="alert-triangle" class="h-6 w-6 text-red-600"></i></div>`;
+            } else {
+                iconHtml = `<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100"><i data-lucide="help-circle" class="w-6 w-6 text-indigo-600"></i></div>`;
+            }
+
+            modalContent.innerHTML = `
+                <div class="p-8">
+                    <div class="text-center">
+                        ${iconHtml}
+                        <h3 class="mt-5 text-lg font-medium text-gray-900">${title}</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">${message}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-2xl">
+                    <button type="button" id="confirm-action-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        ${(isSuccess || isError) ? 'Close' : 'Confirm'}
+                    </button>
+                    ${showCancel ? `<button type="button" id="cancel-action-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button>` : ''}
+                </div>
+            `;
+
+            const confirmBtn = modalContent.querySelector('#confirm-action-btn');
+            confirmBtn.onclick = () => {
+                onConfirm();
+            };
+            
+            if (showCancel) {
+                modalContent.querySelector('#cancel-action-btn').onclick = () => closeModal('confirmation-modal');
+            }
+            
+            lucide.createIcons();
+            showModal(confirmationModalEl);
+        }
+
+
+        // --- Make functions globally available ---
+        window.handleNavigate = handleNavigate;
+        window.toggleUserDropdown = toggleUserDropdown;
+        window.toggleLoginDropdown = toggleLoginDropdown;
+        window.handleLogout = handleLogout;
+        window.toggleMobileMenu = toggleMobileMenu;
+        window.showLoginModal = showLoginModal;
+        window.closeModal = closeModal;
+        window.selectJob = selectJob;
+        window.changePage = changePage;
+        window.showJobListOnMobile = showJobListOnMobile;
+        window.showJobDetails = showJobDetails;
+        window.showApplicantsModal = showApplicantsModal;
+        window.handleSettingsTab = handleSettingsTab;
+        window.showForgotPassword = showForgotPassword;
+        window.handlePasswordReset = handlePasswordReset;
+        window.showPostJobModal = showPostJobModal;
+        window.showEditJobModal = showEditJobModal;
+        window.handleUpdateJob = handleUpdateJob;
+        window.generateJobDescription = generateJobDescription;
+        window.showDeleteConfirmation = showDeleteConfirmation;
+        window.handleDeleteJob = handleDeleteJob;
+        window.timeAgo = timeAgo;
+        window.showReportJobModal = showReportJobModal;
+        window.handleReportJob = handleReportJob;
+        window.togglePasswordVisibility = togglePasswordVisibility;
+        window.handleSaveJob = handleSaveJob;
+        window.showCvFilterModal = showCvFilterModal;
+        window.handleCvFilterChange = handleCvFilterChange;
+        window.applyCvFilters = applyCvFilters;
+        window.showCandidateDetails = showCandidateDetails;
+        window.handleApply = handleApply;
+        window.handleUpdateProfile = handleUpdateProfile;
+        window.handleCvFileSelect = handleCvFileSelect;
+        window.handleDownloadCv = handleDownloadCv;
+        window.handleDownloadProfilePdf = handleDownloadProfilePdf;
+        window.selectRecruiterJobAndNavigate = selectRecruiterJobAndNavigate;
+
+
+        document.addEventListener('click', function(event) {
+            const userMenu = document.getElementById('user-menu');
+            if (userMenu && !userMenu.contains(event.target)) {
+                document.getElementById('user-dropdown').classList.add('hidden');
+            }
+            
+            const loginMenu = document.getElementById('login-menu');
+            if (loginMenu && !loginMenu.contains(event.target)) {
+                const loginDropdown = document.getElementById('login-dropdown');
+                if(loginDropdown) loginDropdown.classList.add('hidden');
+            }
+        });
+
+        // --- FIREBASE REALTIME LISTENERS ---
+        function listenToJobs() {
+            const q = query(collection(db, "jobs"), orderBy("postedDate", "desc"));
+            onSnapshot(q, (querySnapshot) => {
+                const jobs = [];
+                querySnapshot.forEach((doc) => {
+                    jobs.push({ id: doc.id, ...doc.data() });
+                });
+                state.jobs = jobs;
+                
+                // If the selected job no longer exists (e.g., was deleted), update the selection
+                if(state.selectedJobId && !state.jobs.find(j => j.id === state.selectedJobId)) {
+                     state.selectedJobId = state.jobs.length > 0 ? state.jobs[0].id : null;
+                } else if (!state.selectedJobId && state.jobs.length > 0) {
+                     state.selectedJobId = state.jobs[0].id;
+                }
+
+                // Re-render the current view if it's job-related
+                if (['landing', 'findJobs', 'recruiterDashboard', 'recruiterJobs', 'seekerDashboard', 'seekerSavedJobs', 'seekerApplications'].includes(state.currentView)) {
+                    updateUI();
+                }
+            });
+        }
+        
+        function listenToProfiles() {
+            const q = query(collection(db, "profiles"));
+            onSnapshot(q, (querySnapshot) => {
+                const candidates = [];
+                querySnapshot.forEach((doc) => {
+                    candidates.push({ id: doc.id, ...doc.data() });
+                });
+                state.candidates = candidates;
+                if (['cvDatabase', 'recruiterDashboard', 'recruiterJobs', 'applicants-modal', 'settings'].includes(state.currentView)) {
+                    updateUI();
+                }
+            });
+        }
+
+        function listenToUsers() {
+            const q = query(collection(db, "users"));
+            onSnapshot(q, (querySnapshot) => {
+                const users = {};
+                querySnapshot.forEach((doc) => {
+                    users[doc.id] = doc.data();
+                });
+                state.allUsers = users;
+            });
+        }
+
+        let userListener = null;
+        let applicationsListener = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (userListener) userListener(); // Unsubscribe from previous user listener
+            if (applicationsListener) applicationsListener(); // Unsubscribe from previous applications listener
+
+
+            if (user) {
+                const userDocRef = doc(db, "users", user.uid);
+                userListener = onSnapshot(userDocRef, (userDocSnap) => {
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        const nameParts = userData.name.split(' ');
+                        const initials = nameParts.length > 1 
+                            ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}` 
+                            : nameParts[0].substring(0, 2);
+
+                        state.currentUser = {
+                            uid: user.uid,
+                            email: user.email,
+                            name: userData.name,
+                            type: userData.type,
+                            initials: initials.toUpperCase()
+                        };
+                        state.savedJobs = userData.savedJobs || [];
+                        
+                        if(state.currentUser.type === 'seeker') {
+                            listenToApplications();
+                        } else {
+                            listenToAllApplications();
+                        }
+                        
+                        // Check if it's the initial login to redirect
+                        const isInitialLogin = !document.getElementById('user-menu').offsetParent;
+                        if (isInitialLogin && state.currentView === 'landing') {
+                           handleNavigate('dashboard');
+                        } else {
+                            updateUI();
+                        }
+                    } else {
+                        console.error("User data not found in Firestore. Logging out.");
+                        handleLogout();
+                    }
+                });
+            } else {
+                state.currentUser = null;
+                state.savedJobs = [];
+                state.applications = [];
+                handleNavigate('landing');
+            }
+        });
+
+        function listenToApplications() {
+             if (!state.currentUser) return;
+             const q = query(collection(db, "applications"), where("candidateId", "==", state.currentUser.uid));
+             applicationsListener = onSnapshot(q, (querySnapshot) => {
+                const applications = [];
+                querySnapshot.forEach((doc) => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+                state.applications = applications;
+                 if (['seekerDashboard', 'seekerApplications', 'findJobs'].includes(state.currentView)) {
+                    updateUI();
+                }
+             });
+        }
+
+        function listenToAllApplications() {
+            // For recruiters, to get all applications for their jobs
+            const q = query(collection(db, "applications"));
+            applicationsListener = onSnapshot(q, (querySnapshot) => {
+                const applications = [];
+                querySnapshot.forEach((doc) => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+                state.applications = applications;
+                if (['recruiterDashboard', 'recruiterJobs'].includes(state.currentView)) {
+                    updateUI();
+                }
+            });
+        }
+
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            generateMockData();
+            listenToJobs();
+            listenToProfiles();
+            listenToUsers();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobAccess - Recruitment Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .view { display: none; }
+        .view.active { display: block; }
+        
+        /* Modal styles */
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.5);
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+        }
+        .modal-backdrop.active .modal-content {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        .status-applied { background-color: #e0f2fe; color: #0284c7; } /* sky-100, sky-600 */
+        .status-viewed { background-color: #dbeafe; color: #3b82f6; } /* blue-100, blue-500 */
+        .status-shortlisted { background-color: #d1fae5; color: #059669; } /* emerald-100, emerald-600 */
+        .status-rejected { background-color: #fee2e2; color: #dc2626; } /* red-100, red-600 */
+        .status-hired { background-color: #f0abfc; color: #c026d3; } /* fuchsia-200, fuchsia-700 */
+
+        /* Prevent background scroll when modal is open */
+        .overflow-hidden {
+            overflow: hidden;
+        }
+        
+        /* For job list scrolling */
+        .job-list-container {
+            /* We use a fixed height on desktop and let it be natural on mobile */
+            height: auto;
+        }
+        @media (min-width: 1024px) { /* lg breakpoint */
+            .job-list-container {
+                height: calc(100vh - 250px);
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm sticky top-0 z-40">
+            <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <a href="#" class="flex-shrink-0 font-bold text-2xl text-slate-800 flex items-center" onclick="handleNavigate('landing')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 mr-2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            JobAccess
+                        </a>
+                    </div>
+                    <!-- Desktop Menu -->
+                    <div class="hidden md:flex items-center">
+                        <div id="nav-links" class="ml-10 flex items-baseline space-x-4"></div>
+                        <div id="auth-section" class="ml-6 flex items-center">
+                            <div id="auth-buttons"></div>
+                            <div id="user-menu" class="hidden ml-4 relative">
+                                <div>
+                                    <button type="button" class="max-w-xs bg-white rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="user-menu-button" aria-expanded="false" aria-haspopup="true" onclick="toggleUserDropdown()">
+                                        <span class="sr-only">Open user menu</span>
+                                        <div id="user-avatar" class="h-9 w-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base"></div>
+                                    </button>
+                                </div>
+                                <div id="user-dropdown" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mobile menu button -->
+                    <div class="md:hidden">
+                        <button id="mobile-menu-button" onclick="toggleMobileMenu()" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded="false">
+                            <span class="sr-only">Open main menu</span>
+                            <i id="mobile-menu-open-icon" data-lucide="menu" class="block h-6 w-6"></i>
+                            <i id="mobile-menu-close-icon" data-lucide="x" class="hidden h-6 w-6"></i>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+            <!-- Mobile menu, show/hide based on menu state. -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div id="mobile-nav-links" class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <!-- Mobile nav links will be injected here -->
+                </div>
+                <div class="pt-4 pb-3 border-t border-slate-200">
+                     <div id="mobile-user-info" class="hidden items-center px-5">
+                        <div class="flex-shrink-0">
+                           <div id="mobile-user-avatar" class="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base"></div>
+                        </div>
+                        <div class="ml-3">
+                            <div id="mobile-user-name" class="text-base font-medium leading-none text-gray-800"></div>
+                        </div>
+                    </div>
+                    <div id="mobile-auth-buttons" class="mt-3 px-2 space-y-1">
+                        <!-- Mobile auth buttons will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </header>
+
+
+        <!-- Main Content -->
+        <main>
+            <!-- Landing Page View -->
+            <div id="landing-view" class="view"></div>
+            <!-- Find Jobs View -->
+            <div id="find-jobs-view" class="view"></div>
+            <!-- Seeker Dashboard View -->
+            <div id="seeker-dashboard-view" class="view"></div>
+            <!-- Seeker Applications View -->
+            <div id="seeker-applications-view" class="view"></div>
+             <!-- Seeker Saved Jobs View -->
+            <div id="seeker-saved-jobs-view" class="view"></div>
+            <!-- Recruiter Main Dashboard View -->
+            <div id="recruiter-dashboard-view" class="view"></div>
+            <!-- Recruiter Job Postings View -->
+            <div id="recruiter-jobs-view" class="view"></div>
+            <!-- CV Database View -->
+            <div id="cv-database-view" class="view"></div>
+            <!-- Subscription View -->
+            <div id="subscription-view" class="view"></div>
+            <!-- Settings View -->
+            <div id="settings-view" class="view"></div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="login-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+    
+    <div id="job-details-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+    
+    <div id="applicants-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+
+    <div id="post-job-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+
+     <div id="confirmation-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+
+     <div id="report-job-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+    
+    <div id="candidate-details-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+    
+     <div id="cv-filter-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+           <!-- Modal Content Loaded by JS -->
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged,
+            sendPasswordResetEmail
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc,
+            collection,
+            addDoc,
+            query,
+            where,
+            onSnapshot,
+            Timestamp,
+            orderBy,
+            updateDoc,
+            deleteDoc
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvev1lmFheeAmRFqKHPZyIW4tlfL1Xxhs",
+            authDomain: "recruit-1ef6a.firebaseapp.com",
+            projectId: "recruit-1ef6a",
+            storageBucket: "recruit-1ef6a.firebasestorage.app",
+            messagingSenderId: "1079473731321",
+            appId: "1:1079473731321:web:3e0ae67d1cb6fe8a3cd428"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- SIMULATED DATE ---
+        function getSimulatedNow() {
+            // Current time is Saturday, October 4, 2025 at 5:15 PM SAST (UTC+2)
+            return new Date('2025-10-04T17:15:00+02:00');
+        }
+
+        // --- APPLICATION STATE ---
+        const state = {
+            currentUser: null, // { uid, email, name, type, initials }
+            currentView: 'landing',
+            jobs: [],
+            applications: [],
+            candidates: [], // This will be populated from Firestore 'profiles' collection
+            allUsers: {}, // For email fallback
+            savedJobs: [],
+            selectedJobId: null,
+            jobsCurrentPage: 1,
+            jobsPerPage: 8,
+            recruiterJobsCurrentPage: 1,
+            recruiterJobsPerPage: 6,
             mobileShowDetails: false,
             settingsActiveTab: 'profile',
             authLockoutActive: false,
