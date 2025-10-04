@@ -501,18 +501,23 @@
         function renderLandingPage() {
              const jobListingsHtml = state.jobs.slice(0, 3).map(job => {
                 const postedDate = timeAgo(job.postedDate);
+                const recruiter = state.allUsers[job.recruiterId];
+                const companyLogoUrl = recruiter?.photoURL || `https://placehold.co/100x100/e2e8f0/475569?text=${job.company.charAt(0)}`;
                 return `
                 <div class="bg-white p-6 rounded-xl border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-lg text-slate-800">${job.title}</h3>
-                            <p class="text-slate-600 font-medium">${job.company}</p>
-                            <p class="text-sm text-slate-500 mt-1">${job.location}</p>
-                            <p class="text-sm font-semibold text-emerald-600 mt-1">${job.salary || 'Market Related'}</p>
-                        </div>
-                        <div class="text-right flex-shrink-0">
-                            <span class="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${job.type}</span>
-                            <p class="text-xs text-slate-400 mt-2">${postedDate}</p>
+                    <div class="flex items-start gap-4">
+                        <img src="${companyLogoUrl}" alt="${job.company} logo" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x100/e2e8f0/475569?text=${job.company.charAt(0)}'"/>
+                        <div class="flex-grow flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800">${job.title}</h3>
+                                <p class="text-slate-600 font-medium">${job.company}</p>
+                                <p class="text-sm text-slate-500 mt-1">${job.location}</p>
+                                <p class="text-sm font-semibold text-emerald-600 mt-1">${job.salary || 'Market Related'}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <span class="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${job.type}</span>
+                                <p class="text-xs text-slate-400 mt-2">${postedDate}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -570,14 +575,15 @@
 
             const jobListHtml = currentJobs.map(job => {
                 const isSelected = job.id === state.selectedJobId;
-                const companyInitial = job.company.charAt(0);
+                const recruiter = state.allUsers[job.recruiterId];
+                const companyLogoUrl = recruiter?.photoURL || `https://placehold.co/100x100/e2e8f0/475569?text=${job.company.charAt(0)}`;
                 const postedDate = timeAgo(job.postedDate);
                 const isSaved = state.currentUser && state.savedJobs.includes(job.id);
                 
                 return `
                     <div class="p-4 rounded-lg cursor-pointer border-2 ${isSelected ? 'bg-white border-indigo-500 shadow-md' : 'bg-white border-transparent hover:border-slate-300'}" onclick="selectJob('${job.id}')">
                         <div class="flex items-start gap-4">
-                             <div class="w-12 h-12 rounded-lg bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 text-xl">${companyInitial}</div>
+                            <img src="${companyLogoUrl}" alt="${job.company} logo" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x100/e2e8f0/475569?text=${job.company.charAt(0)}'"/>
                             <div class="flex-grow">
                                 <h3 class="font-bold text-slate-800">${job.title}</h3>
                                 <p class="text-sm text-slate-600">${job.company}</p>
@@ -599,6 +605,8 @@
             paginationHtml += `<button onclick="changePage(${state.jobsCurrentPage + 1})" ${state.jobsCurrentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded-md bg-white border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next &raquo;</button></div>`;
 
             const selectedJob = state.jobs.find(j => j.id === state.selectedJobId);
+            const recruiterForDetails = selectedJob ? state.allUsers[selectedJob.recruiterId] : null;
+            const companyLogoUrlForDetails = recruiterForDetails?.photoURL || (selectedJob ? `https://placehold.co/100x100/e2e8f0/475569?text=${selectedJob.company.charAt(0)}` : '');
             const backButtonHtml = `<button onclick="showJobListOnMobile()" class="lg:hidden mb-4 flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800"><i data-lucide="arrow-left" class="w-4 h-4"></i>Back to Job List</button>`;
             const postedDateDetails = selectedJob ? timeAgo(selectedJob.postedDate) : '';
             const closingDateDetails = selectedJob && selectedJob.closingDate ? `Closes ${selectedJob.closingDate.toDate().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}` : '';
@@ -607,7 +615,7 @@
             const reportButtonHtml = `<div class="p-6 text-center text-xs text-slate-400">
                 <a href="#" onclick="showReportJobModal('${selectedJob ? selectedJob.id : ''}')" class="hover:text-red-600 hover:underline">Report this job</a>
             </div>`;
-            const jobDetailsHtml = selectedJob ? `${window.innerWidth < 1024 ? backButtonHtml : ''}<div class="bg-white rounded-xl border border-slate-200 h-full flex flex-col job-list-container"><div class="p-6 border-b sticky top-0 bg-white"><div class="flex flex-col sm:flex-row justify-between items-start gap-4"><div><h2 class="text-xl font-bold text-slate-800">${selectedJob.title}</h2><p class="text-slate-600 font-medium mt-1">${selectedJob.company}</p><p class="text-sm text-slate-500">${selectedJob.location} &bull; <span class="text-slate-400">${postedDateDetails}</span></p><p class="text-sm font-semibold text-emerald-600 mt-1">${selectedJob.salary || 'Market Related'}</p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p><span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${selectedJob.type}</span></div><button onclick="handleApply('${selectedJob.id}')" ${hasApplied ? 'disabled' : ''} class="bg-indigo-600 text-white font-medium px-6 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex-shrink-0 w-full sm:w-auto disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div></div><div class="p-6 overflow-y-auto flex-grow"><h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Job Description</h3><p class="text-slate-600 whitespace-pre-wrap leading-relaxed">${selectedJob.description}</p></div>${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-center h-full bg-white rounded-xl border border-slate-200 text-slate-500">Select a job to view details</div>`;
+            const jobDetailsHtml = selectedJob ? `${window.innerWidth < 1024 ? backButtonHtml : ''}<div class="bg-white rounded-xl border border-slate-200 h-full flex flex-col job-list-container"><div class="p-6 border-b sticky top-0 bg-white"><div class="flex flex-col sm:flex-row justify-between items-start gap-4"><div class="flex items-start gap-4 flex-grow"><img src="${companyLogoUrlForDetails}" alt="${selectedJob.company} logo" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x100/e2e8f0/475569?text=${selectedJob.company.charAt(0)}'"/><div><h2 class="text-xl font-bold text-slate-800">${selectedJob.title}</h2><p class="text-slate-600 font-medium mt-1">${selectedJob.company}</p><p class="text-sm text-slate-500">${selectedJob.location} &bull; <span class="text-slate-400">${postedDateDetails}</span></p><p class="text-sm font-semibold text-emerald-600 mt-1">${selectedJob.salary || 'Market Related'}</p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p><span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${selectedJob.type}</span></div></div><button onclick="handleApply('${selectedJob.id}')" ${hasApplied ? 'disabled' : ''} class="bg-indigo-600 text-white font-medium px-6 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex-shrink-0 w-full sm:w-auto disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div></div><div class="p-6 overflow-y-auto flex-grow"><h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Job Description</h3><p class="text-slate-600 whitespace-pre-wrap leading-relaxed">${selectedJob.description}</p></div>${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-center h-full bg-white rounded-xl border border-slate-200 text-slate-500">Select a job to view details</div>`;
 
             const isMobile = window.innerWidth < 1024;
             const listClasses = isMobile && state.mobileShowDetails ? 'hidden' : 'block';
@@ -1113,7 +1121,7 @@
                                     <img id="profile-photo-preview" src="${userProfile.photoURL || `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`}" class="h-20 w-20 rounded-full object-cover" alt="Profile photo preview">
                                     <label for="photo-upload" class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                         <span>Change</span>
-                                        <input id="photo-upload" name="photo" type="file" class="sr-only" accept="image/*" onchange="handlePhotoFileSelect(event)">
+                                        <input id="photo-upload" name="photo" type="file" class="sr-only" accept="image/*" onchange="handlePhotoFileSelect(event, 'profile-photo-preview')">
                                     </label>
                                 </div>
                             </div>
@@ -1178,16 +1186,29 @@
                     `;
                     break;
                 case 'companyProfile':
-                     contentHtml = `
+                    const companyProfile = state.allUsers[state.currentUser.uid] || {};
+                    contentHtml = `
                         <h2 class="text-2xl font-bold text-slate-800">Company Profile</h2>
                         <p class="text-slate-500 mt-1 mb-6">This information will be displayed on your company page and job posts.</p>
-                        <div class="space-y-6">
-                            <div><label class="block text-sm font-medium text-slate-700">Company Name</label><input type="text" value="${state.currentUser.name}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
-                            <div><label class="block text-sm font-medium text-slate-700">Company Phone</label><input type="tel" value="011 456 7890" placeholder="e.g., 011 456 7890" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
-                            <div><label class="block text-sm font-medium text-slate-700">Company LinkedIn</label><input type="url" value="https://linkedin.com/company/innovate-inc" placeholder="https://linkedin.com/company/your-company" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
-                            <div><label class="block text-sm font-medium text-slate-700">Website</label><input type="url" value="https://innovateinc.co.za" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
-                            <div><label class="block text-sm font-medium text-slate-700">Company Description</label><textarea rows="4" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">Innovate Inc. is a leading technology company...</textarea></div>
-                        </div>
+                        <form id="company-profile-form">
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Company Logo</label>
+                                    <div class="mt-1 flex items-center gap-4">
+                                        <img id="company-logo-preview" src="${companyProfile.photoURL || `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`}" class="h-20 w-20 rounded-lg object-cover" alt="Company logo preview">
+                                        <label for="photo-upload" class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                            <span>Change</span>
+                                            <input id="photo-upload" name="photo" type="file" class="sr-only" accept="image/*" onchange="handlePhotoFileSelect(event, 'company-logo-preview')">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div><label class="block text-sm font-medium text-slate-700">Company Name</label><input name="name" type="text" value="${state.currentUser.name}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                                <div><label class="block text-sm font-medium text-slate-700">Company Phone</label><input name="phone" type="tel" value="${companyProfile.phone || ''}" placeholder="e.g., 011 456 7890" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                                <div><label class="block text-sm font-medium text-slate-700">Company LinkedIn</label><input name="linkedin" type="url" value="${companyProfile.linkedin || ''}" placeholder="https://linkedin.com/company/your-company" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                                <div><label class="block text-sm font-medium text-slate-700">Website</label><input name="website" type="url" value="${companyProfile.website || ''}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                                <div><label class="block text-sm font-medium text-slate-700">Company Description</label><textarea name="description" rows="4" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${companyProfile.description || ''}</textarea></div>
+                            </div>
+                        </form>
                     `;
                     break;
                 case 'account':
@@ -1295,8 +1316,9 @@
             if (saveBtn) {
                  if (state.settingsActiveTab === 'profile') {
                     saveBtn.onclick = handleUpdateProfile;
+                } else if (state.settingsActiveTab === 'companyProfile') {
+                    saveBtn.onclick = handleUpdateCompanyProfile;
                 }
-                // Add other save handlers here if needed
             }
         }
 
@@ -1603,6 +1625,36 @@
             }
         }
 
+        async function handleUpdateCompanyProfile() {
+            if (!state.currentUser || state.currentUser.type !== 'recruiter') return;
+
+            const form = document.getElementById('company-profile-form');
+            if (!form) return;
+
+            const formData = new FormData(form);
+            const updatedData = {
+                name: formData.get('name'),
+                phone: formData.get('phone'),
+                linkedin: formData.get('linkedin'),
+                website: formData.get('website'),
+                description: formData.get('description'),
+            };
+
+            if (state.newPhotoPreview) {
+                updatedData.photoURL = state.newPhotoPreview;
+            }
+
+            const userDocRef = doc(db, "users", state.currentUser.uid);
+            try {
+                await setDoc(userDocRef, updatedData, { merge: true });
+                state.newPhotoPreview = null;
+                showConfirmationModal("Company Profile Updated", "Your company profile has been successfully updated.", () => closeModal('confirmation-modal'), true, false, false);
+            } catch (error) {
+                console.error("Error updating company profile: ", error);
+                showConfirmationModal("Update Failed", "There was an error updating your company profile.", () => closeModal('confirmation-modal'), false, true, false);
+            }
+        }
+
         function startAuthLockoutTimer(duration, button, errorDiv, originalText) {
             if (state.authLockoutActive) return;
             state.authLockoutActive = true;
@@ -1697,14 +1749,14 @@
             }
         }
 
-        function handlePhotoFileSelect(event) {
+        function handlePhotoFileSelect(event, previewId) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = (e) => {
                 state.newPhotoPreview = e.target.result;
-                const previewImg = document.getElementById('profile-photo-preview');
+                const previewImg = document.getElementById(previewId);
                 if (previewImg) {
                     previewImg.src = e.target.result;
                 }
@@ -2517,6 +2569,7 @@
         window.showCandidateDetails = showCandidateDetails;
         window.handleApply = handleApply;
         window.handleUpdateProfile = handleUpdateProfile;
+        window.handleUpdateCompanyProfile = handleUpdateCompanyProfile;
         window.handleCvFileSelect = handleCvFileSelect;
         window.handlePhotoFileSelect = handlePhotoFileSelect;
         window.handleDownloadCv = handleDownloadCv;
