@@ -68,9 +68,8 @@
             <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     <div class="flex items-center">
-                        <a href="#" class="flex-shrink-0 font-bold text-2xl text-slate-800 flex items-center" onclick="handleNavigate('landing')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 mr-2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            JobAccess
+                        <a href="#" class="flex-shrink-0" onclick="handleNavigate('landing')">
+                           <img src="JA-logo.png" alt="JobAccess Logo" class="h-8 w-auto">
                         </a>
                     </div>
                     <!-- Desktop Menu -->
@@ -244,8 +243,8 @@
 
         // --- SIMULATED DATE ---
         function getSimulatedNow() {
-            // Current time is Saturday, October 4, 2025 at 5:15 PM SAST (UTC+2)
-            return new Date('2025-10-04T17:15:00+02:00');
+            // Current time is Sunday, October 5, 2025 at 12:17 PM SAST (UTC+2)
+            return new Date('2025-10-05T12:17:00+02:00');
         }
 
         // --- APPLICATION STATE ---
@@ -1343,11 +1342,12 @@
                 </div>
             `;
             
-            modalContent.innerHTML = `<div class="p-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">${type === 'recruiter' ? 'Recruiter' : 'Job Seeker'} ${isLogin ? 'Login' : 'Sign Up'}</h2>
-                    <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+            modalContent.innerHTML = `<div class="relative p-8">
+                <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl absolute top-4 right-6 z-10">&times;</button>
+                <div class="flex justify-center mb-4">
+                    <img src="JA-logo.png" alt="JobAccess Logo" class="h-8 w-auto">
                 </div>
+                <h2 class="text-2xl font-bold text-slate-800 text-center mb-6">${type === 'recruiter' ? 'Recruiter' : 'Job Seeker'} ${isLogin ? 'Login' : 'Sign Up'}</h2>
                 <div id="auth-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 text-sm"></div>
                 <form id="auth-form">
                     <div class="space-y-4">
@@ -1440,13 +1440,14 @@
 
         function showForgotPassword(type) {
             const modalContent = loginModalEl.querySelector('.modal-content');
-            modalContent.innerHTML = `<div class="p-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">Reset Password</h2>
-                    <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
+            modalContent.innerHTML = `<div class="relative p-8">
+                <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl absolute top-4 right-6 z-10">&times;</button>
+                <div class="flex justify-center mb-4">
+                    <img src="JA-logo.png" alt="JobAccess Logo" class="h-8 w-auto">
                 </div>
+                <h2 class="text-2xl font-bold text-slate-800 text-center mb-2">Reset Password</h2>
                 <div id="auth-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 text-sm"></div>
-                <p class="text-slate-600 text-sm mb-4">Enter your email address and we will send you a link to reset your password.</p>
+                <p class="text-slate-600 text-sm mb-4 text-center">Enter your email address and we will send you a link to reset your password.</p>
                 <form onsubmit="handlePasswordReset(event)">
                     <div class="space-y-4">
                         <div>
@@ -1940,7 +1941,7 @@
                 closeModal('post-job-modal');
             } catch (error) {
                 console.error("Error updating job: ", error);
-                alert("Failed to update job. Please try again.");
+                showConfirmationModal("Update Failed", "Failed to update job. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
             }
         }
 
@@ -1950,7 +1951,7 @@
             const jobTitle = jobTitleInput.value;
 
             if (!jobTitle.trim()) {
-                alert("Please enter a job title first.");
+                showConfirmationModal("Missing Information", "Please enter a job title before generating a description.", () => closeModal('confirmation-modal'), false, true, false);
                 return;
             }
 
@@ -2001,7 +2002,7 @@
         async function handlePostJob(event) {
             event.preventDefault();
             if (!state.currentUser || state.currentUser.type !== 'recruiter') {
-                alert("You must be logged in as a recruiter to post a job.");
+                showLoginModal('recruiter', 'login');
                 return;
             }
 
@@ -2027,7 +2028,7 @@
                 // The onSnapshot listener will automatically update the UI
             } catch (e) {
                 console.error("Error adding document: ", e);
-                alert("There was an error posting your job. Please try again.");
+                showConfirmationModal("Post Failed", "There was an error posting your job. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
             }
         }
 
@@ -2079,8 +2080,9 @@
                 // UI will update automatically via the onSnapshot listener
             } catch(error) {
                 console.error("Error deleting job: ", error);
-                alert("Failed to delete job. Please try again.");
-                closeModal('confirmation-modal');
+                showConfirmationModal("Delete Failed", "Failed to delete job. Please try again.", () => {
+                    closeModal('confirmation-modal');
+                }, false, true, false);
             }
         }
         
@@ -2131,7 +2133,7 @@
         async function handleReportJob(event, jobId) {
             event.preventDefault();
             if(!state.currentUser) {
-                alert("You must be logged in to report a job.");
+                showLoginModal('seeker', 'login');
                 return;
             }
 
@@ -2161,7 +2163,7 @@
 
             } catch(error) {
                 console.error("Error submitting report:", error);
-                alert("There was an error submitting your report. Please try again.");
+                showConfirmationModal("Report Failed", "There was an error submitting your report. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
             }
 
         }
@@ -2189,7 +2191,7 @@
                 // The onSnapshot listener for the user will update the state
             } catch (error) {
                 console.error("Error updating saved jobs: ", error);
-                alert("Could not save job. Please try again.");
+                showConfirmationModal("Save Failed", "Could not save job. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
             }
         }
         
@@ -2592,12 +2594,20 @@
 
         // --- FIREBASE REALTIME LISTENERS ---
         function listenToJobs() {
-            const q = query(collection(db, "jobs"), orderBy("postedDate", "desc"));
+            const q = query(collection(db, "jobs"));
             onSnapshot(q, (querySnapshot) => {
                 const jobs = [];
                 querySnapshot.forEach((doc) => {
                     jobs.push({ id: doc.id, ...doc.data() });
                 });
+                
+                // Sort jobs in memory by postedDate, descending
+                jobs.sort((a, b) => {
+                    const dateA = a.postedDate?.toDate() || 0;
+                    const dateB = b.postedDate?.toDate() || 0;
+                    return dateB - dateA;
+                });
+
                 state.jobs = jobs;
                 
                 // If the selected job no longer exists (e.g., was deleted), update the selection
@@ -2731,6 +2741,7 @@
             listenToProfiles();
             listenToUsers();
             lucide.createIcons();
+            updateUI(); // Ensure initial render
         });
     </script>
 </body>
