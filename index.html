@@ -146,6 +146,8 @@
             <div id="subscription-view" class="view"></div>
             <!-- Settings View -->
             <div id="settings-view" class="view"></div>
+            <!-- Admin Dashboard View -->
+            <div id="admin-dashboard-view" class="view"></div>
         </main>
     </div>
 
@@ -243,8 +245,8 @@
 
         // --- SIMULATED DATE ---
         function getSimulatedNow() {
-            // Current time is Sunday, October 5, 2025 at 12:17 PM SAST (UTC+2)
-            return new Date('2025-10-05T12:17:00+02:00');
+            // Current time is Monday, October 6, 2025 at 4:21 AM SAST (UTC+2)
+            return new Date('2025-10-06T04:21:00+02:00');
         }
 
         // --- APPLICATION STATE ---
@@ -255,6 +257,7 @@
             applications: [],
             candidates: [], // This will be populated from Firestore 'profiles' collection
             allUsers: {}, // For email fallback
+            reports: [],
             savedJobs: [],
             selectedJobId: null,
             jobsCurrentPage: 1,
@@ -267,6 +270,7 @@
             authLockoutActive: false,
             recruiterDashboardChart: null,
             seekerDashboardChart: null,
+            adminDashboardChart: null,
             cvSearchTerm: '',
             cvFilters: {
                 experience: 'any',
@@ -295,6 +299,7 @@
             cvDatabase: document.getElementById('cv-database-view'),
             subscription: document.getElementById('subscription-view'),
             settings: document.getElementById('settings-view'),
+            adminDashboard: document.getElementById('admin-dashboard-view'),
         };
         const loginModalEl = document.getElementById('login-modal');
         const jobDetailsModalEl = document.getElementById('job-details-modal');
@@ -313,7 +318,11 @@
         // --- ROUTING / NAVIGATION ---
         function handleNavigate(view) {
             if (view === 'dashboard' && state.currentUser) {
-                view = state.currentUser.type === 'seeker' ? 'seekerDashboard' : 'recruiterDashboard';
+                if (state.currentUser.type === 'admin') {
+                    view = 'adminDashboard';
+                } else {
+                    view = state.currentUser.type === 'seeker' ? 'seekerDashboard' : 'recruiterDashboard';
+                }
             }
              if (view === 'recruiterJobs') {
                 state.recruiterJobsCurrentPage = 1; 
@@ -353,6 +362,7 @@
                 case 'cvDatabase': renderCvDatabasePage(); break;
                 case 'subscription': renderSubscriptionPage(); break;
                 case 'settings': renderSettingsPage(); break;
+                case 'adminDashboard': renderAdminDashboard(); break;
             }
             updateHeader();
         }
@@ -380,8 +390,10 @@
                 links = [ { text: 'Home', view: 'landing' }, { text: 'Find Jobs', view: 'findJobs' }];
             } else if (state.currentUser.type === 'seeker') {
                 links = [ { text: 'Dashboard', view: 'dashboard' }, { text: 'My Applications', view: 'seekerApplications'}, { text: 'Find Jobs', view: 'findJobs' }];
-            } else { // Recruiter
+            } else if (state.currentUser.type === 'recruiter') {
                 links = [ { text: 'Dashboard', view: 'recruiterDashboard'}, { text: 'Job Postings', view: 'recruiterJobs' }, { text: 'CV Database', view: 'cvDatabase' }, { text: 'Subscription', view: 'subscription' }];
+            } else if (state.currentUser.type === 'admin') {
+                links = [ { text: 'Dashboard', view: 'adminDashboard' }];
             }
             
             // --- Update User Dropdown ---
@@ -390,8 +402,10 @@
                 if(state.currentUser.type === 'seeker'){
                     dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('dashboard')">Dashboard</a>`;
                     dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('seekerSavedJobs')">Saved Jobs</a>`;
-                } else { // Recruiter
+                } else if (state.currentUser.type === 'recruiter') { // Recruiter
                      dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('recruiterDashboard')">Dashboard</a>`;
+                } else { // Admin
+                     dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('adminDashboard')">Dashboard</a>`;
                 }
                 dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('settings')">Settings</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleLogout()">Sign out</a>`;
@@ -402,8 +416,9 @@
             // --- Populate Desktop Menu ---
             navLinks.innerHTML = links.map(l => {
                 const isActive = state.currentView === l.view || 
-                                (l.view === 'dashboard' && state.currentView === 'seekerDashboard') ||
-                                (l.view === 'dashboard' && state.currentView === 'recruiterDashboard');
+                                 (l.view === 'dashboard' && state.currentView === 'seekerDashboard') ||
+                                 (l.view === 'dashboard' && state.currentView === 'recruiterDashboard') ||
+                                 (l.view === 'dashboard' && state.currentView === 'adminDashboard');
                 const classes = isActive 
                     ? 'text-indigo-600 font-semibold px-3 py-2 rounded-md text-sm' 
                     : 'text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium';
@@ -413,8 +428,9 @@
             // --- Populate Mobile Menu ---
             let mobileLinksHtml = links.map(l => {
                  const isActive = state.currentView === l.view || 
-                                (l.view === 'dashboard' && state.currentView === 'seekerDashboard') ||
-                                (l.view === 'dashboard' && state.currentView === 'recruiterDashboard');
+                                 (l.view === 'dashboard' && state.currentView === 'seekerDashboard') ||
+                                 (l.view === 'dashboard' && state.currentView === 'recruiterDashboard') ||
+                                 (l.view === 'dashboard' && state.currentView === 'adminDashboard');
                  const classes = isActive 
                     ? 'bg-indigo-50 text-indigo-700 block px-3 py-2 rounded-md text-base font-medium' 
                     : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
@@ -428,9 +444,9 @@
                     : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
                 
                  if(state.currentUser.type === 'seeker') {
-                     const savedJobsActive = state.currentView === 'seekerSavedJobs';
-                     const savedJobsClasses = savedJobsActive ? 'bg-indigo-50 text-indigo-700 block px-3 py-2 rounded-md text-base font-medium' : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
-                     mobileLinksHtml += `<a href="#" class="${savedJobsClasses}" onclick="handleNavigate('seekerSavedJobs'); toggleMobileMenu();">Saved Jobs</a>`;
+                      const savedJobsActive = state.currentView === 'seekerSavedJobs';
+                      const savedJobsClasses = savedJobsActive ? 'bg-indigo-50 text-indigo-700 block px-3 py-2 rounded-md text-base font-medium' : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium';
+                      mobileLinksHtml += `<a href="#" class="${savedJobsClasses}" onclick="handleNavigate('seekerSavedJobs'); toggleMobileMenu();">Saved Jobs</a>`;
                  }
                 
                  mobileLinksHtml += `<a href="#" class="${settingsClasses}" onclick="handleNavigate('settings'); toggleMobileMenu();">Settings</a>`;
@@ -693,17 +709,17 @@
                     </div>
 
                      <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
-                         <h3 class="text-lg font-bold text-slate-800 mb-4">Recommended For You</h3>
-                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                             ${recommendedJobs.map(job => `
-                                 <div class="p-4 rounded-lg border hover:shadow-md cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
-                                     <h4 class="font-bold text-slate-800">${job.title}</h4>
-                                     <p class="text-sm text-slate-600">${job.company}</p>
-                                     <p class="text-xs text-slate-500 mt-1">${job.location}</p>
-                                 </div>
-                             `).join('')}
-                         </div>
-                    </div>
+                           <h3 class="text-lg font-bold text-slate-800 mb-4">Recommended For You</h3>
+                           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                               ${recommendedJobs.map(job => `
+                                   <div class="p-4 rounded-lg border hover:shadow-md cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
+                                       <h4 class="font-bold text-slate-800">${job.title}</h4>
+                                       <p class="text-sm text-slate-600">${job.company}</p>
+                                       <p class="text-xs text-slate-500 mt-1">${job.location}</p>
+                                   </div>
+                               `).join('')}
+                           </div>
+                     </div>
                 </div>
             `;
             
@@ -840,7 +856,7 @@
                     </div>
                 </div>`;
             }).join('')
-                : '<p class="text-slate-500 md:col-span-2">You haven\'t posted any jobs yet. Click "Post New Job" to get started.</p>';
+                 : '<p class="text-slate-500 md:col-span-2">You haven\'t posted any jobs yet. Click "Post New Job" to get started.</p>';
 
             // Pagination controls
             let paginationHtml = '';
@@ -938,19 +954,19 @@
                             </div>
                         </div>
                     </div>
-                     <!-- Jobs Closing Soon -->
-                     <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
-                         <h3 class="text-lg font-bold text-slate-800 mb-4">Jobs Nearing Closing Date</h3>
-                         <div class="space-y-2">
-                         ${jobsClosingSoon.length > 0 ? jobsClosingSoon.map(job => {
-                             const daysLeft = Math.ceil((job.closingDate.toDate() - now) / (1000 * 60 * 60 * 24));
-                             return `<div onclick="selectRecruiterJobAndNavigate('${job.id}')" class="flex justify-between items-center p-3 -m-3 rounded-lg cursor-pointer hover:bg-slate-50">
-                                <p class="font-medium text-slate-800">${job.title}</p>
-                                <p class="text-sm text-red-600">${daysLeft} day${daysLeft > 1 ? 's' : ''} left</p>
-                            </div>`;
-                         }).join('') : '<p class="text-slate-500 text-sm">No jobs are closing soon.</p>'}
-                         </div>
-                    </div>
+                      <!-- Jobs Closing Soon -->
+                      <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
+                          <h3 class="text-lg font-bold text-slate-800 mb-4">Jobs Nearing Closing Date</h3>
+                          <div class="space-y-2">
+                          ${jobsClosingSoon.length > 0 ? jobsClosingSoon.map(job => {
+                              const daysLeft = Math.ceil((job.closingDate.toDate() - now) / (1000 * 60 * 60 * 24));
+                              return `<div onclick="selectRecruiterJobAndNavigate('${job.id}')" class="flex justify-between items-center p-3 -m-3 rounded-lg cursor-pointer hover:bg-slate-50">
+                                  <p class="font-medium text-slate-800">${job.title}</p>
+                                  <p class="text-sm text-red-600">${daysLeft} day${daysLeft > 1 ? 's' : ''} left</p>
+                              </div>`;
+                          }).join('') : '<p class="text-slate-500 text-sm">No jobs are closing soon.</p>'}
+                          </div>
+                      </div>
                 </div>
             `;
 
@@ -1087,7 +1103,7 @@
                     { key: 'account', label: 'Account Settings', icon: 'settings' },
                     { key: 'notifications', label: 'Notifications', icon: 'bell' },
                 ];
-            } else { // Recruiter
+            } else { // Recruiter or Admin
                  tabs = [
                     { key: 'companyProfile', label: 'Company Profile', icon: 'building-2' },
                     { key: 'account', label: 'Account Settings', icon: 'settings' },
@@ -1320,6 +1336,78 @@
                 }
             }
         }
+
+        // --- ADMIN DASHBOARD ---
+        function renderAdminDashboard() {
+            if (!state.currentUser || state.currentUser.type !== 'admin') {
+                views.adminDashboard.innerHTML = `<p class="text-center p-8">Access Denied.</p>`;
+                return;
+            }
+
+            const totalUsers = Object.keys(state.allUsers).length;
+            const userCounts = Object.values(state.allUsers).reduce((acc, user) => {
+                acc[user.type] = (acc[user.type] || 0) + 1;
+                return acc;
+            }, { seeker: 0, recruiter: 0 });
+
+            views.adminDashboard.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                     <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
+                        <p class="text-slate-500">Platform Overview & Management</p>
+                    </div>
+                    <!-- Stat Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200"><h3 class="text-sm font-medium text-slate-500">Total Users</h3><p class="text-3xl font-bold text-slate-800 mt-2">${totalUsers}</p></div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200"><h3 class="text-sm font-medium text-slate-500">Total Jobs</h3><p class="text-3xl font-bold text-slate-800 mt-2">${state.jobs.length}</p></div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200"><h3 class="text-sm font-medium text-slate-500">Total Applications</h3><p class="text-3xl font-bold text-slate-800 mt-2">${state.applications.length}</p></div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200"><h3 class="text-sm font-medium text-slate-500">Open Reports</h3><p class="text-3xl font-bold text-red-600 mt-2">${state.reports.length}</p></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200">
+                             <h3 class="text-lg font-bold text-slate-800 mb-4">User Roles</h3>
+                             <canvas id="admin-user-chart" class="max-h-80"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                             <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Stats</h3>
+                             <dl class="space-y-4">
+                                <div class="flex justify-between"><dt class="text-slate-500">Job Seekers</dt><dd class="font-semibold text-slate-800">${userCounts.seeker || 0}</dd></div>
+                                <div class="flex justify-between"><dt class="text-slate-500">Recruiters</dt><dd class="font-semibold text-slate-800">${userCounts.recruiter || 0}</dd></div>
+                             </dl>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                const ctx = document.getElementById('admin-user-chart');
+                if (ctx) {
+                     if(state.adminDashboardChart) state.adminDashboardChart.destroy();
+                    state.adminDashboardChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Seekers', 'Recruiters'],
+                            datasets: [{
+                                label: 'User Count',
+                                data: [userCounts.seeker, userCounts.recruiter],
+                                backgroundColor: ['rgba(79, 70, 229, 0.7)', 'rgba(30, 64, 175, 0.7)'],
+                                borderColor: ['rgba(79, 70, 229, 1)', 'rgba(30, 64, 175, 1)'],
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            }]
+                        },
+                        options: {
+                             indexAxis: 'y',
+                             responsive: true,
+                             scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                             plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            }, 0);
+        }
+
 
         // --- MODAL HANDLING ---
         function showModal(modalEl) { document.body.classList.add('overflow-hidden'); modalEl.classList.remove('hidden'); setTimeout(() => modalEl.classList.add('active'), 10); }
@@ -2367,10 +2455,10 @@
                     </div>
                 </div>
                 <div class="p-6 bg-slate-50 border-t mt-auto flex flex-wrap items-center justify-start gap-3">
-                     <div>
+                       <div>
                         <button onclick="handleDownloadProfilePdf('${candidate.id}')" class="text-slate-700 bg-slate-200 hover:bg-slate-300 font-medium py-2 px-4 rounded-lg shadow-sm transition-colors text-sm">Download Profile (PDF)</button>
                         <button onclick="handleDownloadCv('${candidate.id}')" class="ml-2 text-slate-700 bg-slate-200 hover:bg-slate-300 font-medium py-2 px-4 rounded-lg shadow-sm transition-colors text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" ${!candidate.cvFileName ? 'disabled' : ''}>Download CV</button>
-                     </div>
+                       </div>
                 </div>
             `;
             lucide.createIcons();
@@ -2646,6 +2734,23 @@
                     users[doc.id] = doc.data();
                 });
                 state.allUsers = users;
+                if (state.currentView === 'adminDashboard') {
+                    updateUI();
+                }
+            });
+        }
+        
+        function listenToReports() {
+            const q = query(collection(db, "reports"));
+            onSnapshot(q, (querySnapshot) => {
+                const reports = [];
+                querySnapshot.forEach((doc) => {
+                    reports.push({ id: doc.id, ...doc.data() });
+                });
+                state.reports = reports;
+                if (state.currentView === 'adminDashboard') {
+                    updateUI();
+                }
             });
         }
 
@@ -2667,11 +2772,13 @@
                             ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}` 
                             : nameParts[0].substring(0, 2);
 
+                        const userType = user.email === 'admin@jobaccess.co.za' ? 'admin' : userData.type;
+
                         state.currentUser = {
                             uid: user.uid,
                             email: user.email,
                             name: userData.name,
-                            type: userData.type,
+                            type: userType,
                             initials: initials.toUpperCase(),
                             photoURL: userData.photoURL
                         };
@@ -2719,7 +2826,7 @@
         }
 
         function listenToAllApplications() {
-            // For recruiters, to get all applications for their jobs
+            // For recruiters and admins
             const q = query(collection(db, "applications"));
             applicationsListener = onSnapshot(q, (querySnapshot) => {
                 const applications = [];
@@ -2727,7 +2834,7 @@
                     applications.push({ id: doc.id, ...doc.data() });
                 });
                 state.applications = applications;
-                if (['recruiterDashboard', 'recruiterJobs'].includes(state.currentView)) {
+                if (['recruiterDashboard', 'recruiterJobs', 'adminDashboard'].includes(state.currentView)) {
                     updateUI();
                 }
             });
@@ -2740,6 +2847,7 @@
             listenToJobs();
             listenToProfiles();
             listenToUsers();
+            listenToReports();
             lucide.createIcons();
             updateUI(); // Ensure initial render
         });
