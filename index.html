@@ -44,6 +44,39 @@
         .status-rejected { background-color: #fee2e2; color: #dc2626; } /* red-100, red-600 */
         .status-hired { background-color: #f0abfc; color: #c026d3; } /* fuchsia-200, fuchsia-700 */
 
+        /* Password strength indicator */
+        .strength-meter {
+            display: flex;
+            gap: 3px;
+            height: 4px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .strength-meter div {
+            flex-grow: 1;
+            background-color: #e5e7eb; /* gray-200 */
+            transition: background-color 0.3s ease;
+        }
+        .strength-meter.weak div:nth-child(-n+1) { background-color: #ef4444; } /* red-500 */
+        .strength-meter.medium div:nth-child(-n+2) { background-color: #f59e0b; } /* amber-500 */
+        .strength-meter.strong div:nth-child(-n+3) { background-color: #f59e0b; } /* amber-500 */
+        .strength-meter.very-strong div { background-color: #10b981; } /* emerald-500 */
+
+        .strength-criteria li {
+            transition: color 0.3s ease;
+        }
+        .strength-criteria li.valid {
+            color: #10b981; /* emerald-500 */
+        }
+        .strength-criteria li.invalid {
+            color: #ef4444; /* red-500 */
+        }
+        .strength-criteria li.valid .check-icon { display: inline-block; }
+        .strength-criteria li:not(.valid) .check-icon { display: none; }
+        .strength-criteria li.valid .cross-icon { display: none; }
+        .strength-criteria li:not(.valid) .cross-icon { display: inline-block; }
+
         /* Prevent background scroll when modal is open */
         .overflow-hidden {
             overflow: hidden;
@@ -79,7 +112,7 @@
                             <div id="auth-buttons"></div>
                             <div id="user-menu" class="hidden ml-4 relative">
                                 <div>
-                                    <button type="button" class="max-w-xs bg-white rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="user-menu-button" aria-expanded="false" aria-haspopup="true" onclick="toggleUserDropdown()">
+                                    <button type="button" class="max-w-xs bg-white rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
                                         <span class="sr-only">Open user menu</span>
                                         <div id="user-avatar-container">
                                             <img id="user-avatar" class="h-9 w-9 rounded-full object-cover" src="" alt="User avatar">
@@ -267,6 +300,7 @@
             selectedRecruiterJobId: null,
             mobileShowDetails: false,
             settingsActiveTab: 'profile',
+            adminActiveTab: 'overview',
             authLockoutActive: false,
             recruiterDashboardChart: null,
             seekerDashboardChart: null,
@@ -336,6 +370,9 @@
             }
             if (view === 'settings' && state.currentUser) {
                 state.settingsActiveTab = state.currentUser.type === 'seeker' ? 'profile' : 'companyProfile';
+            }
+            if (view === 'adminDashboard') {
+                state.adminActiveTab = 'overview';
             }
             state.currentView = view;
             window.scrollTo(0, 0);
@@ -474,17 +511,17 @@
                 userDropdown.classList.add('hidden'); // ensure user dropdown is hidden
                 authButtons.innerHTML = `
                     <div class="relative" id="login-menu">
-                         <button onclick="toggleLoginDropdown()" class="bg-indigo-600 text-white font-medium px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                         <button id="login-dropdown-button" class="bg-indigo-600 text-white font-medium px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
                             <span>Login / Sign Up</span>
                             <i data-lucide="chevron-down" class="w-4 h-4"></i>
                         </button>
                         <div id="login-dropdown" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden">
                             <div class="py-1" role="menu" aria-orientation="vertical">
-                                <a href="#" onclick="showLoginModal('seeker', 'login'); toggleLoginDropdown();" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                <a href="#" onclick="showLoginModal('seeker', 'login');" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                     <i data-lucide="user" class="w-4 h-4 text-indigo-600"></i>
                                     <span>I'm a Job Seeker</span>
                                 </a>
-                                <a href="#" onclick="showLoginModal('recruiter', 'login'); toggleLoginDropdown();" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                <a href="#" onclick="showLoginModal('recruiter', 'login');" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                     <i data-lucide="briefcase" class="w-4 h-4 text-indigo-600"></i>
                                     <span>I'm a Recruiter</span>
                                 </a>
@@ -492,6 +529,7 @@
                         </div>
                     </div>
                 `;
+                document.getElementById('login-dropdown-button').addEventListener('click', toggleLoginDropdown);
 
                 mobileAuthButtons.classList.remove('hidden');
                 mobileUserInfo.classList.add('hidden');
@@ -1338,17 +1376,49 @@
         }
 
         // --- ADMIN DASHBOARD ---
+        function handleAdminTab(tab) {
+            state.adminActiveTab = tab;
+            renderAdminDashboard();
+        }
+
         function renderAdminDashboard() {
             if (!state.currentUser || state.currentUser.type !== 'admin') {
                 views.adminDashboard.innerHTML = `<p class="text-center p-8">Access Denied.</p>`;
                 return;
             }
 
-            const totalUsers = Object.keys(state.allUsers).length;
-            const userCounts = Object.values(state.allUsers).reduce((acc, user) => {
-                acc[user.type] = (acc[user.type] || 0) + 1;
-                return acc;
-            }, { seeker: 0, recruiter: 0 });
+            const tabs = [
+                { key: 'overview', label: 'Overview', icon: 'layout-dashboard' },
+                { key: 'users', label: 'Manage Users', icon: 'users' },
+                { key: 'jobs', label: 'Manage Jobs', icon: 'briefcase' },
+                { key: 'reports', label: 'Job Reports', icon: 'flag' },
+            ];
+
+            const tabsHtml = tabs.map(tab => {
+                const isActive = state.adminActiveTab === tab.key;
+                return `<button onclick="handleAdminTab('${tab.key}')" class="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${isActive ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}">
+                    <i data-lucide="${tab.icon}" class="w-4 h-4"></i>
+                    <span>${tab.label}</span>
+                    ${tab.key === 'reports' && state.reports.length > 0 ? `<span class="ml-auto inline-block py-0.5 px-2.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded-full">${state.reports.length}</span>` : ''}
+                </button>`;
+            }).join('');
+            
+            let contentHtml = '';
+            switch(state.adminActiveTab) {
+                case 'overview':
+                    contentHtml = renderAdminOverview();
+                    break;
+                case 'users':
+                    contentHtml = renderAdminUsersTable();
+                    break;
+                case 'jobs':
+                    contentHtml = renderAdminJobsTable();
+                    break;
+                case 'reports':
+                    contentHtml = renderAdminReportsTable();
+                    break;
+            }
+
 
             views.adminDashboard.innerHTML = `
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -1356,6 +1426,34 @@
                         <h1 class="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
                         <p class="text-slate-500">Platform Overview & Management</p>
                     </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <aside class="md:col-span-1">
+                            <nav class="flex flex-col space-y-2">${tabsHtml}</nav>
+                        </aside>
+                        <div class="md:col-span-3">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+
+            // Re-render chart if on overview tab
+            if(state.adminActiveTab === 'overview'){
+                 renderAdminOverviewChart();
+            }
+        }
+
+        function renderAdminOverview() {
+            const totalUsers = Object.keys(state.allUsers).length;
+            const userCounts = Object.values(state.allUsers).reduce((acc, user) => {
+                acc[user.type] = (acc[user.type] || 0) + 1;
+                return acc;
+            }, { seeker: 0, recruiter: 0 });
+
+             return `
+                <div>
                     <!-- Stat Cards -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         <div class="bg-white p-6 rounded-xl border border-slate-200"><h3 class="text-sm font-medium text-slate-500">Total Users</h3><p class="text-3xl font-bold text-slate-800 mt-2">${totalUsers}</p></div>
@@ -1377,35 +1475,107 @@
                              </dl>
                         </div>
                     </div>
+                </div>`;
+        }
+        
+        function renderAdminOverviewChart() {
+             const userCounts = Object.values(state.allUsers).reduce((acc, user) => {
+                acc[user.type] = (acc[user.type] || 0) + 1;
+                return acc;
+            }, { seeker: 0, recruiter: 0 });
+
+             const ctx = document.getElementById('admin-user-chart');
+            if (ctx) {
+                 if(state.adminDashboardChart) state.adminDashboardChart.destroy();
+                state.adminDashboardChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Seekers', 'Recruiters'],
+                        datasets: [{
+                            label: 'User Count',
+                            data: [userCounts.seeker, userCounts.recruiter],
+                            backgroundColor: ['rgba(79, 70, 229, 0.7)', 'rgba(30, 64, 175, 0.7)'],
+                            borderColor: ['rgba(79, 70, 229, 1)', 'rgba(30, 64, 175, 1)'],
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }]
+                    },
+                    options: {
+                         indexAxis: 'y',
+                         responsive: true,
+                         scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                         plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        function renderAdminUsersTable() {
+            const users = Object.entries(state.allUsers).map(([id, data]) => ({ id, ...data }));
+            const usersHtml = users.map(user => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4">${user.name}</td>
+                    <td class="p-4">${user.email}</td>
+                    <td class="p-4"><span class="status-badge ${user.type === 'seeker' ? 'status-applied' : 'status-hired'}">${user.type}</span></td>
+                    <td class="p-4">${user.joinedDate ? user.joinedDate.toDate().toLocaleDateString('en-ZA') : 'N/A'}</td>
+                    <td class="p-4 flex gap-2 justify-end"><button class="text-sm font-medium text-amber-600 hover:text-amber-800">Suspend</button><button class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button></td>
+                </tr>
+            `).join('');
+            return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <h3 class="text-lg font-bold text-slate-800 p-4 border-b">Manage Users</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><th class="p-4 text-left">Name</th><th class="p-4 text-left">Email</th><th class="p-4 text-left">Type</th><th class="p-4 text-left">Joined</th><th class="p-4 text-right">Actions</th></thead>
+                        <tbody>${usersHtml}</tbody>
+                    </table>
                 </div>
-            `;
-            
-            setTimeout(() => {
-                const ctx = document.getElementById('admin-user-chart');
-                if (ctx) {
-                     if(state.adminDashboardChart) state.adminDashboardChart.destroy();
-                    state.adminDashboardChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: ['Seekers', 'Recruiters'],
-                            datasets: [{
-                                label: 'User Count',
-                                data: [userCounts.seeker, userCounts.recruiter],
-                                backgroundColor: ['rgba(79, 70, 229, 0.7)', 'rgba(30, 64, 175, 0.7)'],
-                                borderColor: ['rgba(79, 70, 229, 1)', 'rgba(30, 64, 175, 1)'],
-                                borderWidth: 1,
-                                borderRadius: 4,
-                            }]
-                        },
-                        options: {
-                             indexAxis: 'y',
-                             responsive: true,
-                             scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                             plugins: { legend: { display: false } }
-                        }
-                    });
-                }
-            }, 0);
+            </div>`;
+        }
+
+        function renderAdminJobsTable() {
+            const jobsHtml = state.jobs.map(job => {
+                const applicantCount = state.applications.filter(app => app.jobId === job.id).length;
+                return `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4">${job.title}</td>
+                    <td class="p-4">${job.company}</td>
+                    <td class="p-4">${job.postedDate.toDate().toLocaleDateString('en-ZA')}</td>
+                    <td class="p-4 text-center">${applicantCount}</td>
+                    <td class="p-4 flex gap-2 justify-end"><button onclick="showJobDetails('${job.id}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View</button><button class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button></td>
+                </tr>
+            `}).join('');
+             return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <h3 class="text-lg font-bold text-slate-800 p-4 border-b">Manage Jobs</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><th class="p-4 text-left">Title</th><th class="p-4 text-left">Company</th><th class="p-4 text-left">Posted</th><th class="p-4 text-center">Apps</th><th class="p-4 text-right">Actions</th></thead>
+                        <tbody>${jobsHtml}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+
+        function renderAdminReportsTable() {
+            const reportsHtml = state.reports.map(report => {
+                const job = state.jobs.find(j => j.id === report.jobId);
+                return `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4">${job ? job.title : 'Job Deleted'}</td>
+                    <td class="p-4">${report.reason}</td>
+                    <td class="p-4">${report.reportedDate.toDate().toLocaleString('en-ZA')}</td>
+                    <td class="p-4 flex gap-2 justify-end"><button onclick="showJobDetails('${report.jobId}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View Job</button><button class="text-sm font-medium text-emerald-600 hover:text-emerald-800">Dismiss</button><button class="text-sm font-medium text-red-600 hover:text-red-800">Delete Job</button></td>
+                </tr>
+            `}).join('');
+             return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <h3 class="text-lg font-bold text-slate-800 p-4 border-b">Manage Reports</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><th class="p-4 text-left">Job Title</th><th class="p-4 text-left">Reason</th><th class="p-4 text-left">Date</th><th class="p-4 text-right">Actions</th></thead>
+                        <tbody>${reportsHtml}</tbody>
+                    </table>
+                     ${state.reports.length === 0 ? '<p class="text-center text-slate-500 p-8">No open reports.</p>' : ''}
+                </div>
+            </div>`;
         }
 
 
@@ -1430,6 +1600,18 @@
                 </div>
             `;
             
+            const passwordStrengthIndicator = isLogin ? '' : `
+                <div id="password-strength-container" class="mt-2">
+                    <div id="strength-meter" class="strength-meter"><div></div><div></div><div></div><div></div></div>
+                    <ul id="password-criteria" class="strength-criteria text-xs space-y-1 mt-2">
+                        <li data-criterion="length" class="flex items-center"><i data-lucide="x" class="cross-icon w-3 h-3 mr-1"></i><i data-lucide="check" class="check-icon w-3 h-3 mr-1"></i>At least 8 characters</li>
+                        <li data-criterion="uppercase" class="flex items-center"><i data-lucide="x" class="cross-icon w-3 h-3 mr-1"></i><i data-lucide="check" class="check-icon w-3 h-3 mr-1"></i>One uppercase letter</li>
+                        <li data-criterion="number" class="flex items-center"><i data-lucide="x" class="cross-icon w-3 h-3 mr-1"></i><i data-lucide="check" class="check-icon w-3 h-3 mr-1"></i>One number</li>
+                        <li data-criterion="special" class="flex items-center"><i data-lucide="x" class="cross-icon w-3 h-3 mr-1"></i><i data-lucide="check" class="check-icon w-3 h-3 mr-1"></i>One special character (!@#$%^&*)</li>
+                    </ul>
+                </div>
+            `;
+
             modalContent.innerHTML = `<div class="relative p-8">
                 <button onclick="closeModal('login-modal')" class="text-slate-400 hover:text-slate-600 text-3xl absolute top-4 right-6 z-10">&times;</button>
                 <div class="flex justify-center mb-4">
@@ -1447,20 +1629,21 @@
                         <div>
                             <label for="password" class="text-sm font-medium text-slate-700">Password</label>
                              <div class="relative mt-1">
-                                <input id="password" name="password" type="password" autocomplete="current-password" required class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <input id="password" name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" oninput="${isLogin ? '' : `checkPasswordStrength(this.value)`}" required class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                 <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
                                     <i data-lucide="eye" class="h-5 w-5 text-gray-400"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
+                    ${passwordStrengthIndicator}
                     ${isLogin ? `<div class="flex items-center justify-end mt-4">
                         <div class="text-sm">
                             <a href="#" onclick="showForgotPassword('${type}')" class="font-medium text-indigo-600 hover:text-indigo-500">Forgot your password?</a>
                         </div>
                     </div>` : ''}
                     <div class="mt-6">
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">${isLogin ? 'Sign in' : 'Create Account'}</button>
+                        <button type="submit" ${isLogin ? '' : 'disabled'} class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed">${isLogin ? 'Sign in' : 'Create Account'}</button>
                     </div>
                     <p class="mt-4 text-center text-sm text-slate-500">
                         ${isLogin ? 'Not a member?' : 'Already have an account?'}
@@ -1478,6 +1661,9 @@
                     handleSignUp(event, type);
                 }
             });
+            if (!isLogin) {
+                checkPasswordStrength(''); // Set initial state for criteria UI
+            }
             lucide.createIcons();
             showModal(loginModalEl);
         }
@@ -1582,7 +1768,7 @@
         }
         
         // --- AUTHENTICATION & MENU ---
-        async function handleLogin(event) {
+        async function handleLogin(event, type) {
             const email = event.target.email.value;
             const password = event.target.password.value;
             const errorDiv = document.getElementById('auth-error');
@@ -1623,7 +1809,8 @@
                     email: email,
                     type: type,
                     savedJobs: [],
-                    photoURL: photoURL
+                    photoURL: photoURL,
+                    joinedDate: Timestamp.now()
                 });
 
                 if (type === 'seeker') {
@@ -1793,7 +1980,17 @@
         }
 
         function handleLogout() {
-            signOut(auth);
+            showConfirmationModal(
+                "Confirm Sign Out",
+                "Are you sure you want to sign out?",
+                () => {
+                    signOut(auth);
+                    closeModal('confirmation-modal');
+                },
+                false, // isSuccess
+                false, // isError
+                true   // showCancel
+            );
         }
 
         function toggleUserDropdown() { document.getElementById('user-dropdown').classList.toggle('hidden'); }
@@ -2628,8 +2825,6 @@
 
         // --- Make functions globally available ---
         window.handleNavigate = handleNavigate;
-        window.toggleUserDropdown = toggleUserDropdown;
-        window.toggleLoginDropdown = toggleLoginDropdown;
         window.handleLogout = handleLogout;
         window.toggleMobileMenu = toggleMobileMenu;
         window.showLoginModal = showLoginModal;
@@ -2640,6 +2835,7 @@
         window.showJobDetails = showJobDetails;
         window.showApplicantsModal = showApplicantsModal;
         window.handleSettingsTab = handleSettingsTab;
+        window.handleAdminTab = handleAdminTab;
         window.showForgotPassword = showForgotPassword;
         window.handlePasswordReset = handlePasswordReset;
         window.showPostJobModal = showPostJobModal;
@@ -2670,7 +2866,8 @@
         document.addEventListener('click', function(event) {
             const userMenu = document.getElementById('user-menu');
             if (userMenu && !userMenu.contains(event.target)) {
-                document.getElementById('user-dropdown').classList.add('hidden');
+                const userDropdown = document.getElementById('user-dropdown');
+                if (userDropdown) userDropdown.classList.add('hidden');
             }
             
             const loginMenu = document.getElementById('login-menu');
@@ -2706,7 +2903,7 @@
                 }
 
                 // Re-render the current view if it's job-related
-                if (['landing', 'findJobs', 'recruiterDashboard', 'recruiterJobs', 'seekerDashboard', 'seekerSavedJobs', 'seekerApplications'].includes(state.currentView)) {
+                if (['landing', 'findJobs', 'recruiterDashboard', 'recruiterJobs', 'seekerDashboard', 'seekerSavedJobs', 'seekerApplications', 'adminDashboard'].includes(state.currentView)) {
                     updateUI();
                 }
             });
@@ -2786,7 +2983,7 @@
                         
                         if(state.currentUser.type === 'seeker') {
                             listenToApplications();
-                        } else {
+                        } else { // Recruiter or Admin
                             listenToAllApplications();
                         }
                         
@@ -2849,6 +3046,17 @@
             listenToUsers();
             listenToReports();
             lucide.createIcons();
+            
+            // Add event listener for static elements that might be re-rendered
+            document.addEventListener('click', function(event) {
+                if (event.target.closest('#user-menu-button')) {
+                    toggleUserDropdown();
+                }
+                if (event.target.closest('#login-dropdown-button')) {
+                    toggleLoginDropdown();
+                }
+            });
+
             updateUI(); // Ensure initial render
         });
     </script>
