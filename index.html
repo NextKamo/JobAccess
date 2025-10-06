@@ -2031,6 +2031,45 @@
             lucide.createIcons();
         }
 
+        function checkPasswordStrength(password) {
+            const meter = document.getElementById('strength-meter');
+            const criteriaList = document.getElementById('password-criteria');
+            const submitButton = document.querySelector('#auth-form button[type="submit"]');
+
+            if (!meter || !criteriaList) return;
+
+            const criteria = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[!@#$%^&*]/.test(password)
+            };
+
+            let score = 0;
+            for (const key in criteria) {
+                const criterionEl = criteriaList.querySelector(`[data-criterion="${key}"]`);
+                if (criteria[key]) {
+                    score++;
+                    criterionEl.classList.remove('invalid');
+                    criterionEl.classList.add('valid');
+                } else {
+                    criterionEl.classList.remove('valid');
+                    criterionEl.classList.add('invalid');
+                }
+            }
+
+            meter.className = 'strength-meter'; // Reset
+            if (score === 1) meter.classList.add('weak');
+            else if (score === 2) meter.classList.add('medium');
+            else if (score === 3) meter.classList.add('strong');
+            else if (score === 4) meter.classList.add('very-strong');
+
+            if (submitButton) {
+                submitButton.disabled = score !== 4;
+            }
+        }
+
+
         function handleCvFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -2861,6 +2900,7 @@
         window.showReportJobModal = showReportJobModal;
         window.handleReportJob = handleReportJob;
         window.togglePasswordVisibility = togglePasswordVisibility;
+        window.checkPasswordStrength = checkPasswordStrength;
         window.handleSaveJob = handleSaveJob;
         window.showCvFilterModal = showCvFilterModal;
         window.handleCvFilterChange = handleCvFilterChange;
@@ -3075,6 +3115,3 @@
     </script>
 </body>
 </html>
-
-
-
