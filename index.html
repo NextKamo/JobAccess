@@ -517,11 +517,11 @@
                         </button>
                         <div id="login-dropdown" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden">
                             <div class="py-1" role="menu" aria-orientation="vertical">
-                                <a href="#" onclick="showLoginModal('seeker', 'login');" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                <a href="#" onclick="showLoginModal('seeker', 'login'); toggleLoginDropdown();" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                     <i data-lucide="user" class="w-4 h-4 text-indigo-600"></i>
                                     <span>I'm a Job Seeker</span>
                                 </a>
-                                <a href="#" onclick="showLoginModal('recruiter', 'login');" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                <a href="#" onclick="showLoginModal('recruiter', 'login'); toggleLoginDropdown();" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                     <i data-lucide="briefcase" class="w-4 h-4 text-indigo-600"></i>
                                     <span>I'm a Recruiter</span>
                                 </a>
@@ -529,7 +529,6 @@
                         </div>
                     </div>
                 `;
-                document.getElementById('login-dropdown-button').addEventListener('click', toggleLoginDropdown);
 
                 mobileAuthButtons.classList.remove('hidden');
                 mobileUserInfo.classList.add('hidden');
@@ -3062,4 +3061,5 @@
     </script>
 </body>
 </html>
+
 
