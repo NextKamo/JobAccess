@@ -43,6 +43,8 @@
         .status-shortlisted { background-color: #d1fae5; color: #059669; } /* emerald-100, emerald-600 */
         .status-rejected { background-color: #fee2e2; color: #dc2626; } /* red-100, red-600 */
         .status-hired { background-color: #f0abfc; color: #c026d3; } /* fuchsia-200, fuchsia-700 */
+        .status-interview { background-color: #e9d5ff; color: #9333ea; } /* purple-200, purple-700 */
+
 
         /* Password strength indicator */
         .strength-meter {
@@ -91,6 +93,33 @@
             .job-list-container {
                 height: calc(100vh - 250px);
             }
+        }
+        /* Kanban board styles */
+        .kanban-board {
+            display: flex;
+            gap: 1.5rem; /* gap-6 */
+            overflow-x: auto;
+            padding-bottom: 1rem; /* pb-4 */
+        }
+        .kanban-column {
+            flex: 0 0 320px; /* w-80 */
+            max-width: 320px;
+        }
+        .kanban-cards {
+            min-height: 200px;
+        }
+        .kanban-card {
+            cursor: grab;
+        }
+        .kanban-card:active {
+            cursor: grabbing;
+        }
+        .kanban-card.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+        .kanban-column.drag-over {
+            background-color: #f3f4f6; /* gray-100 */
         }
     </style>
 </head>
@@ -173,6 +202,8 @@
             <div id="recruiter-dashboard-view" class="view"></div>
             <!-- Recruiter Job Postings View -->
             <div id="recruiter-jobs-view" class="view"></div>
+            <!-- Recruiter Pipeline View -->
+            <div id="recruiter-pipeline-view" class="view"></div>
             <!-- CV Database View -->
             <div id="cv-database-view" class="view"></div>
             <!-- Subscription View -->
@@ -312,6 +343,7 @@
             recruiterJobsCurrentPage: 1,
             recruiterJobsPerPage: 6,
             selectedRecruiterJobId: null,
+            pipelineSelectedJobId: 'all', // 'all' or a specific job ID
             mobileShowDetails: false,
             settingsActiveTab: 'profile',
             adminActiveTab: 'overview',
@@ -344,6 +376,7 @@
             seekerSavedJobs: document.getElementById('seeker-saved-jobs-view'),
             recruiterDashboard: document.getElementById('recruiter-dashboard-view'),
             recruiterJobs: document.getElementById('recruiter-jobs-view'),
+            recruiterPipeline: document.getElementById('recruiter-pipeline-view'),
             cvDatabase: document.getElementById('cv-database-view'),
             subscription: document.getElementById('subscription-view'),
             settings: document.getElementById('settings-view'),
@@ -410,6 +443,7 @@
                 case 'seekerSavedJobs': renderSeekerSavedJobs(); break;
                 case 'recruiterDashboard': renderRecruiterDashboard(); break;
                 case 'recruiterJobs': renderRecruiterJobsPage(); break;
+                case 'recruiterPipeline': renderRecruiterPipelinePage(); break;
                 case 'cvDatabase': renderCvDatabasePage(); break;
                 case 'subscription': renderSubscriptionPage(); break;
                 case 'settings': renderSettingsPage(); break;
@@ -442,7 +476,7 @@
             } else if (state.currentUser.type === 'seeker') {
                 links = [ { text: 'Dashboard', view: 'dashboard' }, { text: 'My Applications', view: 'seekerApplications'}, { text: 'Find Jobs', view: 'findJobs' }];
             } else if (state.currentUser.type === 'recruiter') {
-                links = [ { text: 'Dashboard', view: 'recruiterDashboard'}, { text: 'Job Postings', view: 'recruiterJobs' }, { text: 'CV Database', view: 'cvDatabase' }, { text: 'Subscription', view: 'subscription' }];
+                links = [ { text: 'Dashboard', view: 'recruiterDashboard'}, { text: 'Job Postings', view: 'recruiterJobs' }, { text: 'Applicant Pipeline', view: 'recruiterPipeline' }, { text: 'CV Database', view: 'cvDatabase' }, { text: 'Subscription', view: 'subscription' }];
             } else if (state.currentUser.type === 'admin') {
                 links = [ { text: 'Dashboard', view: 'adminDashboard' }];
             }
@@ -757,7 +791,7 @@
             const statusCounts = myApplications.reduce((acc, app) => {
                 acc[app.status] = (acc[app.status] || 0) + 1;
                 return acc;
-            }, { applied: 0, viewed: 0, shortlisted: 0, rejected: 0, hired: 0 });
+            }, { applied: 0, viewed: 0, shortlisted: 0, interview: 0, rejected: 0, hired: 0 });
 
             const recommendedJobs = state.jobs.slice(3,6);
 
@@ -831,8 +865,8 @@
                             datasets: [{
                                 label: 'Applications',
                                 data: Object.values(statusCounts),
-                                backgroundColor: ['#e0f2fe', '#dbeafe', '#d1fae5', '#fee2e2', '#f0abfc'],
-                                borderColor: ['#0284c7', '#3b82f6', '#059669', '#dc2626', '#c026d3'],
+                                backgroundColor: ['#e0f2fe', '#dbeafe', '#d1fae5', '#e9d5ff', '#fee2e2', '#f0abfc'],
+                                borderColor: ['#0284c7', '#3b82f6', '#059669', '#9333ea', '#dc2626', '#c026d3'],
                                 borderWidth: 1
                             }]
                         },
@@ -978,6 +1012,85 @@
             }
         }
 
+        function renderRecruiterPipelinePage() {
+            if (!state.currentUser || state.currentUser.type !== 'recruiter') return;
+
+            const recruiterJobs = state.jobs.filter(job => job.recruiterId === state.currentUser.uid);
+            const recruiterJobIds = recruiterJobs.map(j => j.id);
+
+            let filteredApplications = state.applications.filter(app => recruiterJobIds.includes(app.jobId));
+            
+            if (state.pipelineSelectedJobId !== 'all') {
+                filteredApplications = filteredApplications.filter(app => app.jobId === state.pipelineSelectedJobId);
+            }
+
+            const pipelineColumns = {
+                applied: [],
+                viewed: [],
+                shortlisted: [],
+                interview: [],
+                hired: [],
+            };
+
+            filteredApplications.forEach(app => {
+                const candidate = state.candidates.find(c => c.id === app.candidateId);
+                const user = state.allUsers[app.candidateId]; // Fallback for name/email
+                if (candidate || user) {
+                    const applicantData = { 
+                        ...app,
+                        name: candidate?.name || user?.name,
+                        photoURL: candidate?.photoURL || user?.photoURL,
+                        initials: (candidate?.name || user?.name || '?').split(' ').map(n=>n[0]).join('')
+                    };
+                    if (pipelineColumns[app.status]) {
+                        pipelineColumns[app.status].push(applicantData);
+                    }
+                }
+            });
+
+            const jobOptionsHtml = recruiterJobs.map(job => `<option value="${job.id}" ${state.pipelineSelectedJobId === job.id ? 'selected' : ''}>${job.title}</option>`).join('');
+
+            const renderColumn = (title, applicants) => `
+                <div class="kanban-column bg-slate-100 rounded-xl p-4">
+                    <h3 class="font-semibold text-slate-700 mb-4 uppercase text-sm tracking-wider">${title} (${applicants.length})</h3>
+                    <div class="kanban-cards space-y-4" data-status="${title.toLowerCase()}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+                        ${applicants.map(app => `
+                            <div class="kanban-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm" draggable="true" data-application-id="${app.id}" ondragstart="handleDragStart(event)">
+                                <p class="font-semibold text-slate-800">${app.name}</p>
+                                <button onclick="showCandidateDetails('${app.candidateId}')" class="text-xs text-indigo-600 hover:underline mt-1">View Profile</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            views.recruiterPipeline.innerHTML = `
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                     <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+                         <h1 class="text-3xl font-bold text-slate-800">Applicant Pipeline</h1>
+                         <div class="w-full sm:w-64">
+                             <select id="pipeline-job-filter" class="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                 <option value="all" ${state.pipelineSelectedJobId === 'all' ? 'selected' : ''}>All Jobs</option>
+                                 ${jobOptionsHtml}
+                             </select>
+                         </div>
+                     </div>
+                     <div class="kanban-board">
+                        ${renderColumn('Applied', pipelineColumns.applied)}
+                        ${renderColumn('Viewed', pipelineColumns.viewed)}
+                        ${renderColumn('Shortlisted', pipelineColumns.shortlisted)}
+                        ${renderColumn('Interview', pipelineColumns.interview)}
+                        ${renderColumn('Hired', pipelineColumns.hired)}
+                     </div>
+                </div>
+            `;
+
+            document.getElementById('pipeline-job-filter').addEventListener('change', (e) => {
+                state.pipelineSelectedJobId = e.target.value;
+                renderRecruiterPipelinePage();
+            });
+        }
+
         function renderRecruiterDashboard() {
              if (!state.currentUser) return;
              const recruiterJobs = state.jobs.filter(job => job.recruiterId === state.currentUser.uid);
@@ -1109,6 +1222,62 @@
             }, 0);
         }
         
+        // --- DRAG AND DROP FOR KANBAN ---
+        function handleDragStart(event) {
+            event.dataTransfer.setData("text/plain", event.target.dataset.applicationId);
+            setTimeout(() => {
+                event.target.classList.add('dragging');
+            }, 0);
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+        }
+
+        function handleDragEnter(event) {
+            event.preventDefault();
+            const column = event.target.closest('.kanban-cards');
+            if (column) {
+                column.parentElement.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(event) {
+            const column = event.target.closest('.kanban-cards');
+            if (column) {
+                 column.parentElement.classList.remove('drag-over');
+            }
+        }
+
+        async function handleDrop(event) {
+            event.preventDefault();
+            const column = event.target.closest('.kanban-cards');
+            if (!column) return;
+
+            column.parentElement.classList.remove('drag-over');
+            const applicationId = event.dataTransfer.getData("text/plain");
+            const newStatus = column.dataset.status;
+
+            const application = state.applications.find(app => app.id === applicationId);
+            if (application && application.status !== newStatus) {
+                try {
+                    const appDocRef = doc(db, "applications", applicationId);
+                    await updateDoc(appDocRef, { status: newStatus });
+                    // UI will update via onSnapshot listener
+                } catch (error) {
+                    console.error("Error updating application status: ", error);
+                    showConfirmationModal("Update Failed", "Could not update applicant status. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
+                }
+            }
+
+            const draggedEl = document.querySelector(`[data-application-id="${applicationId}"]`);
+            if (draggedEl) {
+                draggedEl.classList.remove('dragging');
+                // The onSnapshot will handle re-rendering, but for immediate feedback:
+                column.appendChild(draggedEl);
+            }
+        }
+
         function renderCvDatabasePage() {
             const searchTerm = state.cvSearchTerm.toLowerCase();
             const { experience, location, jobType, skills } = state.cvFilters;
@@ -3095,6 +3264,11 @@
         window.handleDownloadCv = handleDownloadCv;
         window.handleDownloadProfilePdf = handleDownloadProfilePdf;
         window.selectRecruiterJobAndNavigate = selectRecruiterJobAndNavigate;
+        window.handleDragStart = handleDragStart;
+        window.handleDragOver = handleDragOver;
+        window.handleDrop = handleDrop;
+        window.handleDragEnter = handleDragEnter;
+        window.handleDragLeave = handleDragLeave;
 
 
         document.addEventListener('click', function(event) {
@@ -3250,7 +3424,7 @@
                     applications.push({ id: doc.id, ...doc.data() });
                 });
                 state.applications = applications;
-                 if (['seekerDashboard', 'seekerApplications', 'findJobs'].includes(state.currentView)) {
+                 if (['seekerDashboard', 'seekerApplications', 'findJobs', 'recruiterPipeline'].includes(state.currentView)) {
                     updateUI();
                 }
              });
@@ -3265,7 +3439,7 @@
                     applications.push({ id: doc.id, ...doc.data() });
                 });
                 state.applications = applications;
-                if (['recruiterDashboard', 'recruiterJobs', 'adminDashboard'].includes(state.currentView)) {
+                if (['recruiterDashboard', 'recruiterJobs', 'recruiterPipeline', 'adminDashboard'].includes(state.currentView)) {
                     updateUI();
                 }
             });
@@ -3296,6 +3470,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
