@@ -590,6 +590,7 @@
             `}).join('');
 
             views.landing.innerHTML = `
+                <!-- Hero Section -->
                 <div class="bg-white">
                     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
                         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight">Find Your Next Big Opportunity</h1>
@@ -600,13 +601,55 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Featured Jobs Section -->
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                    <h2 class="text-3xl font-bold text-slate-800 mb-8">Featured Jobs</h2>
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-bold text-slate-800">Featured Jobs</h2>
+                        <a href="#" onclick="handleNavigate('findJobs')" class="font-medium text-indigo-600 hover:text-indigo-800">View all jobs &rarr;</a>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${jobListingsHtml}
                     </div>
                 </div>
+
+                <!-- How It Works Section -->
+                <div class="bg-white py-16">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                         <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">How It Works</h2>
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+                             <div>
+                                 <div class="bg-indigo-100 text-indigo-600 rounded-full h-16 w-16 flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
+                                 <h3 class="font-semibold text-lg text-slate-800 mb-2">Create an Account</h3>
+                                 <p class="text-slate-600">Whether you're a job seeker or a recruiter, signing up is quick and easy.</p>
+                             </div>
+                             <div>
+                                 <div class="bg-indigo-100 text-indigo-600 rounded-full h-16 w-16 flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
+                                 <h3 class="font-semibold text-lg text-slate-800 mb-2">Find or Post Jobs</h3>
+                                 <p class="text-slate-600">Seekers can search for jobs, while recruiters post their vacancies.</p>
+                             </div>
+                             <div>
+                                 <div class="bg-indigo-100 text-indigo-600 rounded-full h-16 w-16 flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
+                                 <h3 class="font-semibold text-lg text-slate-800 mb-2">Get Connected</h3>
+                                 <p class="text-slate-600">Apply for jobs or review applications to find the perfect match.</p>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+                
+                 <!-- Call to Action Section -->
+                <div class="bg-indigo-600">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                        <h2 class="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+                        <p class="text-indigo-200 mb-8 max-w-2xl mx-auto">Join thousands of job seekers and recruiters on the premier platform for talent in South Africa.</p>
+                        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                           <button onclick="showLoginModal('seeker', 'signup')" class="bg-white text-indigo-600 font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-slate-100 transition-colors w-full sm:w-auto">Sign Up as a Job Seeker</button>
+                           <button onclick="showLoginModal('recruiter', 'signup')" class="bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-indigo-800 transition-colors w-full sm:w-auto">Post a Job for Free</button>
+                        </div>
+                    </div>
+                </div>
             `;
+            lucide.createIcons();
         }
 
         function selectJob(jobId) {
@@ -2243,14 +2286,14 @@
             const modalContent = postJobModalEl.querySelector('.modal-content');
             const today = getSimulatedNow().toISOString().split('T')[0];
             modalContent.innerHTML = `
-                <form id="post-job-form">
-                    <div class="p-6 border-b">
+                <form id="post-job-form" class="flex flex-col h-full">
+                    <div class="p-6 border-b flex-shrink-0">
                         <div class="flex justify-between items-center">
                             <h2 class="text-2xl font-bold text-slate-800">Post a New Job</h2>
                             <button type="button" onclick="closeModal('post-job-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
                         </div>
                     </div>
-                    <div class="p-8 overflow-y-auto">
+                    <div class="p-8 overflow-y-auto flex-grow">
                         <div class="space-y-6">
                             <div>
                                 <div class="flex justify-between items-center">
@@ -2309,7 +2352,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="p-6 bg-slate-50 border-t mt-auto flex justify-end">
+                    <div class="p-6 bg-slate-50 border-t flex justify-end flex-shrink-0">
                         <button type="submit" class="w-full sm:w-auto bg-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Post Job</button>
                     </div>
                 </form>
@@ -2335,14 +2378,14 @@
 
             const modalContent = postJobModalEl.querySelector('.modal-content');
             modalContent.innerHTML = `
-                <form id="edit-job-form">
-                    <div class="p-6 border-b">
+                <form id="edit-job-form" class="flex flex-col h-full">
+                    <div class="p-6 border-b flex-shrink-0">
                         <div class="flex justify-between items-center">
                             <h2 class="text-2xl font-bold text-slate-800">Edit Job Post</h2>
                             <button type="button" onclick="closeModal('post-job-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
                         </div>
                     </div>
-                    <div class="p-8 overflow-y-auto">
+                    <div class="p-8 overflow-y-auto flex-grow">
                         <div class="space-y-6">
                              <div>
                                 <label for="job-title" class="block text-sm font-medium text-slate-700">Job Title</label>
@@ -2382,7 +2425,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="p-6 bg-slate-50 border-t mt-auto flex justify-end">
+                    <div class="p-6 bg-slate-50 border-t flex justify-end flex-shrink-0">
                         <button type="submit" class="w-full sm:w-auto bg-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Save Changes</button>
                     </div>
                 </form>
@@ -3253,6 +3296,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
