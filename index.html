@@ -1405,6 +1405,7 @@
                 { key: 'users', label: 'Manage Users', icon: 'users' },
                 { key: 'jobs', label: 'Manage Jobs', icon: 'briefcase' },
                 { key: 'reports', label: 'Job Reports', icon: 'flag' },
+                { key: 'cvDatabase', label: 'CV Database', icon: 'database' },
             ];
 
             const tabsHtml = tabs.map(tab => {
@@ -1429,6 +1430,9 @@
                     break;
                 case 'reports':
                     contentHtml = renderAdminReportsTable();
+                    break;
+                case 'cvDatabase':
+                    contentHtml = renderAdminCvDatabaseReport();
                     break;
             }
 
@@ -1456,6 +1460,139 @@
             if(state.adminActiveTab === 'overview'){
                  renderAdminOverviewChart();
             }
+        }
+
+        function renderAdminCvDatabaseReport() {
+            const totalCandidates = state.candidates.length;
+
+            // Calculate experience breakdown
+            const experienceBreakdown = {
+                '0-2 years': 0,
+                '3-5 years': 0,
+                '6-10 years': 0,
+                '10+ years': 0,
+            };
+            const totalExperience = state.candidates.reduce((acc, c) => acc + (parseInt(c.experience) || 0), 0);
+            state.candidates.forEach(c => {
+                const exp = parseInt(c.experience) || 0;
+                if (exp <= 2) experienceBreakdown['0-2 years']++;
+                else if (exp <= 5) experienceBreakdown['3-5 years']++;
+                else if (exp <= 10) experienceBreakdown['6-10 years']++;
+                else experienceBreakdown['10+ years']++;
+            });
+            const averageExperience = totalCandidates > 0 ? (totalExperience / totalCandidates).toFixed(1) : 0;
+
+            // Top skills
+            const allSkills = state.candidates.flatMap(c => (c.skills || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean));
+            const skillCounts = allSkills.reduce((acc, skill) => {
+                acc[skill] = (acc[skill] || 0) + 1;
+                return acc;
+            }, {});
+            const topSkills = Object.entries(skillCounts)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5);
+
+            // Find most recent candidates
+            const recentCandidates = state.candidates
+                .map(candidate => {
+                    const user = state.allUsers[candidate.id];
+                    return {
+                        ...candidate,
+                        joinedDate: user ? user.joinedDate : null
+                    };
+                })
+                .filter(c => c.joinedDate) // Only include candidates with a join date
+                .sort((a, b) => b.joinedDate.toDate() - a.joinedDate.toDate())
+                .slice(0, 5);
+
+            const recentCandidatesHtml = recentCandidates.map(candidate => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4">${candidate.name}</td>
+                    <td class="p-4">${candidate.location || 'N/A'}</td>
+                    <td class="p-4">${candidate.experience || '0'} years</td>
+                    <td class="p-4">${candidate.joinedDate.toDate().toLocaleDateString('en-ZA')}</td>
+                    <td class="p-4 text-right"><button onclick="showCandidateDetails('${candidate.id}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View</button></td>
+                </tr>
+            `).join('');
+
+
+            const html = `
+                <div class="space-y-8">
+                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Experience Distribution</h3>
+                            <canvas id="admin-cv-chart" class="max-h-80"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                             <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Stats</h3>
+                             <dl class="space-y-4">
+                                <div class="flex justify-between"><dt class="text-slate-500">Total Profiles</dt><dd class="font-semibold text-slate-800">${totalCandidates}</dd></div>
+                                <div class="flex justify-between"><dt class="text-slate-500">Avg. Experience</dt><dd class="font-semibold text-slate-800">${averageExperience} years</dd></div>
+                                <div>
+                                     <dt class="text-slate-500 mb-2">Top 5 Skills</dt>
+                                     <dd class="flex flex-wrap gap-2">
+                                        ${topSkills.map(([skill]) => `<span class="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-1 rounded-md capitalize">${skill}</span>`).join('')}
+                                     </dd>
+                                </div>
+                             </dl>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <h3 class="text-lg font-bold text-slate-800 p-4 border-b">Recently Joined Candidates</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
+                                    <tr>
+                                        <th class="p-4 text-left">Name</th>
+                                        <th class="p-4 text-left">Location</th>
+                                        <th class="p-4 text-left">Experience</th>
+                                        <th class="p-4 text-left">Joined</th>
+                                        <th class="p-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${recentCandidates.length > 0 ? recentCandidatesHtml : '<tr><td colspan="5" class="text-center p-8 text-slate-500">No candidate profiles found.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Delay chart rendering to ensure canvas is in the DOM
+            setTimeout(() => {
+                const ctx = document.getElementById('admin-cv-chart');
+                if (ctx) {
+                    const existingChart = Chart.getChart(ctx);
+                    if (existingChart) {
+                        existingChart.destroy();
+                    }
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(experienceBreakdown),
+                            datasets: [{
+                                label: 'Candidates',
+                                data: Object.values(experienceBreakdown),
+                                backgroundColor: ['#a5b4fc', '#818cf8', '#6366f1', '#4f46e5'],
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                }
+                            }
+                        }
+                    })
+                }
+            }, 0);
+
+
+            return html;
         }
 
         function renderAdminOverview() {
@@ -2879,6 +3016,7 @@
         window.handleNavigate = handleNavigate;
         window.handleLogout = handleLogout;
         window.toggleMobileMenu = toggleMobileMenu;
+        window.toggleLoginDropdown = toggleLoginDropdown;
         window.showLoginModal = showLoginModal;
         window.closeModal = closeModal;
         window.selectJob = selectJob;
@@ -2970,7 +3108,7 @@
                     candidates.push({ id: doc.id, ...doc.data() });
                 });
                 state.candidates = candidates;
-                if (['cvDatabase', 'recruiterDashboard', 'recruiterJobs', 'applicants-modal', 'settings'].includes(state.currentView)) {
+                if (['cvDatabase', 'recruiterDashboard', 'recruiterJobs', 'applicants-modal', 'settings', 'adminDashboard'].includes(state.currentView)) {
                     updateUI();
                 }
             });
@@ -3115,4 +3253,6 @@
     </script>
 </body>
 </html>
+
+
 
