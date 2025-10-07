@@ -303,7 +303,8 @@
             Timestamp,
             orderBy,
             updateDoc,
-            deleteDoc
+            deleteDoc,
+            getDocs
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
@@ -1874,15 +1875,22 @@
 
         function renderAdminUsersTable() {
             const users = Object.entries(state.allUsers).map(([id, data]) => ({ id, ...data }));
-            const usersHtml = users.map(user => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4">${user.name}</td>
+            const usersHtml = users.map(user => {
+                const isSuspended = user.suspended === true;
+                return `
+                <tr class="hover:bg-slate-50 ${isSuspended ? 'bg-red-50 text-slate-500' : ''}">
+                    <td class="p-4">${user.name} ${isSuspended ? '<span class="text-xs font-semibold text-red-600">(Suspended)</span>' : ''}</td>
                     <td class="p-4">${user.email}</td>
                     <td class="p-4"><span class="status-badge ${user.type === 'seeker' ? 'status-applied' : 'status-hired'}">${user.type}</span></td>
                     <td class="p-4">${user.joinedDate ? user.joinedDate.toDate().toLocaleDateString('en-ZA') : 'N/A'}</td>
-                    <td class="p-4 flex gap-2 justify-end"><button class="text-sm font-medium text-amber-600 hover:text-amber-800">Suspend</button><button class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button></td>
+                    <td class="p-4 flex gap-2 justify-end">
+                        <button onclick="showSuspendUserModal('${user.id}', '${user.name.replace(/'/g, "\\'")}', ${isSuspended})" class="text-sm font-medium ${isSuspended ? 'text-emerald-600 hover:text-emerald-800' : 'text-amber-600 hover:text-amber-800'}">
+                            ${isSuspended ? 'Unsuspend' : 'Suspend'}
+                        </button>
+                        <button onclick="showDeleteUserModal('${user.id}', '${user.name.replace(/'/g, "\\'")}')" class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button>
+                    </td>
                 </tr>
-            `).join('');
+            `}).join('');
             return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <h3 class="text-lg font-bold text-slate-800 p-4 border-b">Manage Users</h3>
                 <div class="overflow-x-auto">
@@ -3181,7 +3189,7 @@
             );
         }
 
-        function showConfirmationModal(title, message, onConfirm, isSuccess = false, isError = false, showCancel = true) {
+        function showConfirmationModal(title, message, onConfirm, isSuccess = false, isError = false, showCancel = true, confirmButtonClass = 'bg-indigo-600 hover:bg-indigo-700') {
             const modalContent = confirmationModalEl.querySelector('.modal-content');
             let iconHtml = '';
             if (isSuccess) {
@@ -3203,7 +3211,7 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-2xl">
-                    <button type="button" id="confirm-action-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="button" id="confirm-action-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white ${confirmButtonClass} sm:ml-3 sm:w-auto sm:text-sm">
                         ${(isSuccess || isError) ? 'Close' : 'Confirm'}
                     </button>
                     ${showCancel ? `<button type="button" id="cancel-action-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button>` : ''}
@@ -3221,6 +3229,86 @@
             
             lucide.createIcons();
             showModal(confirmationModalEl);
+        }
+
+
+        // --- ADMIN USER MANAGEMENT ---
+        function showSuspendUserModal(userId, userName, isSuspended) {
+            const title = isSuspended ? "Unsuspend User" : "Suspend User";
+            const message = `Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} the user ${userName}? ${!isSuspended ? 'They will be logged out immediately.' : ''}`;
+            const onConfirm = () => {
+                if (isSuspended) {
+                    handleUnsuspendUser(userId);
+                } else {
+                    handleSuspendUser(userId);
+                }
+                closeModal('confirmation-modal');
+            };
+            showConfirmationModal(title, message, onConfirm);
+        }
+
+        function showDeleteUserModal(userId, userName) {
+            const title = "Delete User";
+            const message = `Are you sure you want to permanently delete the user ${userName}? This will remove their profile and all associated data. This action cannot be undone.`;
+            const onConfirm = () => {
+                handleDeleteUser(userId);
+                closeModal('confirmation-modal');
+            };
+            showConfirmationModal(title, message, onConfirm, false, true, true, 'bg-red-600 hover:bg-red-700');
+        }
+
+        async function handleSuspendUser(userId) {
+            const userDocRef = doc(db, "users", userId);
+            try {
+                await updateDoc(userDocRef, { suspended: true });
+                console.log(`User ${userId} suspended successfully.`);
+            } catch (error) {
+                console.error("Error suspending user: ", error);
+            }
+        }
+
+        async function handleUnsuspendUser(userId) {
+            const userDocRef = doc(db, "users", userId);
+            try {
+                await updateDoc(userDocRef, { suspended: false });
+                console.log(`User ${userId} unsuspended successfully.`);
+            } catch (error) {
+                console.error("Error unsuspending user: ", error);
+            }
+        }
+
+        async function handleDeleteUser(userId) {
+            console.log(`Attempting to delete user ${userId} and associated data.`);
+            const userDocRef = doc(db, "users", userId);
+            const profileDocRef = doc(db, "profiles", userId);
+            
+            try {
+                // In a real app, you'd call a Cloud Function to delete the Firebase Auth user.
+                console.log(`[SIMULATION] In a real app, the Auth user for ${userId} would be deleted from Firebase Authentication here.`);
+                
+                // Delete Firestore documents
+                await deleteDoc(userDocRef);
+                
+                const profileSnap = await getDoc(profileDocRef);
+                if (profileSnap.exists()) {
+                    await deleteDoc(profileDocRef);
+                }
+
+                // Delete user's applications (if they are a seeker)
+                const appsQuery = query(collection(db, "applications"), where("candidateId", "==", userId));
+                const appsSnapshot = await getDocs(appsQuery);
+                const deletePromises = [];
+                appsSnapshot.forEach((doc) => {
+                    deletePromises.push(deleteDoc(doc.ref));
+                });
+                await Promise.all(deletePromises);
+                
+                console.log(`Successfully deleted Firestore data for user ${userId}.`);
+
+            } catch (error) {
+                console.error("Error deleting user data: ", error);
+                 showConfirmationModal("Deletion Failed", "There was an error deleting the user data.", () => closeModal('confirmation-modal'), false, true, false);
+            }
         }
 
 
@@ -3269,6 +3357,8 @@
         window.handleDrop = handleDrop;
         window.handleDragEnter = handleDragEnter;
         window.handleDragLeave = handleDragLeave;
+        window.showSuspendUserModal = showSuspendUserModal;
+        window.showDeleteUserModal = showDeleteUserModal;
 
 
         document.addEventListener('click', function(event) {
@@ -3372,6 +3462,19 @@
                 userListener = onSnapshot(userDocRef, (userDocSnap) => {
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
+
+                        if (userData.suspended) {
+                            console.warn(`User ${user.uid} is suspended. Forcing logout.`);
+                            signOut(auth);
+                            showConfirmationModal(
+                                "Account Suspended",
+                                "Your account has been suspended by an administrator. Please contact support for assistance.",
+                                () => closeModal('confirmation-modal'),
+                                false, true, false
+                            );
+                            return;
+                        }
+
                         const nameParts = userData.name.split(' ');
                         const initials = nameParts.length > 1 
                             ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}` 
@@ -3470,6 +3573,7 @@
     </script>
 </body>
 </html>
+
 
 
 
