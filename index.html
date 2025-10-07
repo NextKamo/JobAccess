@@ -121,6 +121,16 @@
         .kanban-column.drag-over {
             background-color: #f3f4f6; /* gray-100 */
         }
+        /* Toast styles */
+        .toast {
+            transition: all 0.5s ease-in-out;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -139,6 +149,16 @@
                         <div id="nav-links" class="ml-10 flex items-baseline space-x-4"></div>
                         <div id="auth-section" class="ml-6 flex items-center">
                             <div id="auth-buttons"></div>
+                            <div id="notification-menu" class="hidden ml-4 relative">
+                                <button type="button" id="notification-button" class="p-2 rounded-full text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    <span class="sr-only">View notifications</span>
+                                    <i data-lucide="bell" class="h-6 w-6"></i>
+                                    <span id="notification-badge" class="hidden absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-white text-xs flex items-center justify-center"></span>
+                                </button>
+                                <div id="notification-dropdown" class="origin-top-right absolute right-0 mt-2 w-80 max-w-sm rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical">
+                                    <!-- Notifications will be injected here -->
+                                </div>
+                            </div>
                             <div id="user-menu" class="hidden ml-4 relative">
                                 <div>
                                     <button type="button" class="max-w-xs bg-white rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
@@ -177,6 +197,11 @@
                              <div id="mobile-user-name" class="text-base font-medium leading-none text-gray-800"></div>
                              <div id="mobile-user-email" class="text-sm font-medium leading-none text-gray-500 mt-1"></div>
                          </div>
+                         <button id="mobile-notification-button" type="button" class="ml-auto flex-shrink-0 bg-white p-1 text-slate-400 rounded-full hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 relative">
+                            <span class="sr-only">View notifications</span>
+                            <i data-lucide="bell" class="h-6 w-6"></i>
+                            <span id="mobile-notification-badge" class="hidden absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-white text-xs flex items-center justify-center"></span>
+                         </button>
                      </div>
                     <div id="mobile-auth-buttons" class="mt-3 px-2 space-y-1">
                         <!-- Mobile auth buttons will be injected here -->
@@ -278,6 +303,9 @@
         </div>
     </div>
 
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[100] space-y-3"></div>
+
     <!-- Firebase SDKs -->
     <script type="module">
         // Import the functions you need from the SDKs you need
@@ -334,6 +362,7 @@
             currentView: 'landing',
             jobs: [],
             applications: [],
+            notifications: [],
             candidates: [], // This will be populated from Firestore 'profiles' collection
             allUsers: {}, // For email fallback
             reports: [],
@@ -470,6 +499,14 @@
             const mobileUserName = document.getElementById('mobile-user-name');
             const mobileUserEmail = document.getElementById('mobile-user-email');
 
+            // Notification elements
+            const notificationMenu = document.getElementById('notification-menu');
+            const notificationButton = document.getElementById('notification-button');
+            const notificationDropdown = document.getElementById('notification-dropdown');
+            const notificationBadge = document.getElementById('notification-badge');
+            const mobileNotificationButton = document.getElementById('mobile-notification-button');
+            const mobileNotificationBadge = document.getElementById('mobile-notification-badge');
+
             // --- Define Links based on state ---
             let links = [];
              if (!state.currentUser) {
@@ -549,14 +586,47 @@
                 
                 mobileAuthButtons.classList.add('hidden');
                 mobileUserInfo.classList.remove('hidden');
+                mobileNotificationButton.classList.remove('hidden');
                 mobileUserAvatar.src = state.currentUser.photoURL;
                 mobileUserAvatar.onerror = () => { mobileUserAvatar.src = `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`; };
                 mobileUserName.textContent = state.currentUser.name;
                 mobileUserEmail.textContent = state.currentUser.email;
 
+                // --- Handle Notifications ---
+                notificationMenu.classList.remove('hidden');
+                const unreadCount = state.notifications.filter(n => !n.isRead).length;
+                
+                if(unreadCount > 0) {
+                    notificationBadge.textContent = unreadCount;
+                    notificationBadge.classList.remove('hidden');
+                    mobileNotificationBadge.textContent = unreadCount;
+                    mobileNotificationBadge.classList.remove('hidden');
+                } else {
+                    notificationBadge.classList.add('hidden');
+                    mobileNotificationBadge.classList.add('hidden');
+                }
+
+                notificationDropdown.innerHTML = `
+                    <div class="px-4 py-3 border-b">
+                        <p class="text-sm font-semibold text-slate-800">Notifications</p>
+                    </div>
+                    <div class="py-1 max-h-80 overflow-y-auto">
+                        ${state.notifications.length > 0 ? state.notifications.map(n => {
+                            const job = n.jobId ? state.jobs.find(j => j.id === n.jobId) : null;
+                            const companyName = job ? job.company : '';
+                            return `
+                            <a href="#" onclick="handleNotificationClick('${n.link}', ${job ? `'${job.id}'` : null});" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 ${!n.isRead ? 'bg-indigo-50' : ''}">
+                                <p class="font-medium truncate">${n.message}</p>
+                                <p class="text-xs text-slate-500 mt-1">${companyName ? `${companyName} • ` : ''}${timeAgo(n.timestamp)}</p>
+                            </a>
+                        `}).join('') : '<p class="p-4 text-sm text-slate-500">No new notifications.</p>'}
+                    </div>
+                `;
+
             } else {
                 authButtons.classList.remove('hidden');
                 userMenu.classList.add('hidden');
+                notificationMenu.classList.add('hidden');
                 userDropdown.classList.add('hidden'); // ensure user dropdown is hidden
                 authButtons.innerHTML = `
                     <div class="relative" id="login-menu">
@@ -1265,7 +1335,14 @@
                 try {
                     const appDocRef = doc(db, "applications", applicationId);
                     await updateDoc(appDocRef, { status: newStatus });
-                    // UI will update via onSnapshot listener
+                    
+                    // Create notification for the job seeker
+                    const applicant = state.candidates.find(c => c.id === application.candidateId);
+                    const job = state.jobs.find(j => j.id === application.jobId);
+                    if (applicant && job) {
+                        const message = `Your application for ${job.title} was updated to: ${newStatus}.`;
+                        await createNotification(applicant.id, message, 'seekerApplications', job.id);
+                    }
                 } catch (error) {
                     console.error("Error updating application status: ", error);
                     showConfirmationModal("Update Failed", "Could not update applicant status. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
@@ -1912,7 +1989,10 @@
                     <td class="p-4">${job.company}</td>
                     <td class="p-4">${job.postedDate.toDate().toLocaleDateString('en-ZA')}</td>
                     <td class="p-4 text-center">${applicantCount}</td>
-                    <td class="p-4 flex gap-2 justify-end"><button onclick="showJobDetails('${job.id}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View</button><button class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button></td>
+                    <td class="p-4 flex gap-2 justify-end">
+                        <button onclick="showJobDetails('${job.id}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View</button>
+                        <button onclick="showAdminDeleteJobModal('${job.id}', '${job.title.replace(/'/g, "\\'")}')" class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button>
+                    </td>
                 </tr>
             `}).join('');
              return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -1934,7 +2014,11 @@
                     <td class="p-4">${job ? job.title : 'Job Deleted'}</td>
                     <td class="p-4">${report.reason}</td>
                     <td class="p-4">${report.reportedDate.toDate().toLocaleString('en-ZA')}</td>
-                    <td class="p-4 flex gap-2 justify-end"><button onclick="showJobDetails('${report.jobId}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View Job</button><button class="text-sm font-medium text-emerald-600 hover:text-emerald-800">Dismiss</button><button class="text-sm font-medium text-red-600 hover:text-red-800">Delete Job</button></td>
+                    <td class="p-4 flex gap-2 justify-end">
+                        <button onclick="showJobDetails('${report.jobId}')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">View Job</button>
+                        <button onclick="handleDismissReport('${report.id}')" class="text-sm font-medium text-emerald-600 hover:text-emerald-800">Dismiss</button>
+                        <button onclick="showAdminDeleteJobModal('${report.jobId}', '${job ? job.title.replace(/'/g, "\\'") : 'this job'}')" class="text-sm font-medium text-red-600 hover:text-red-800">Delete Job</button>
+                    </td>
                 </tr>
             `}).join('');
              return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -3169,6 +3253,13 @@
                             status: 'applied'
                         };
                         await addDoc(collection(db, "applications"), newApplication);
+
+                        // Create notification for the recruiter
+                        const recruiterId = job.recruiterId;
+                        const applicantName = state.currentUser.name;
+                        const message = `${applicantName} applied for your job: ${job.title}.`;
+                        await createNotification(recruiterId, message, 'recruiterPipeline', job.id);
+
                         showConfirmationModal(
                             "Application Sent!",
                             "Your application has been successfully submitted.",
@@ -3234,6 +3325,92 @@
             showModal(confirmationModalEl);
         }
 
+
+        // --- NOTIFICATION FUNCTIONS ---
+        async function createNotification(userId, message, link, associatedJobId = null) {
+            if (!userId) return;
+            try {
+                await addDoc(collection(db, "notifications"), {
+                    userId: userId,
+                    message: message,
+                    link: link,
+                    jobId: associatedJobId,
+                    timestamp: Timestamp.now(),
+                    isRead: false
+                });
+            } catch (error) {
+                console.error("Error creating notification: ", error);
+            }
+        }
+
+        function handleNotificationClick(view, jobId) {
+            handleNavigate(view);
+            if (jobId) {
+                if (view === 'seekerApplications' || view === 'findJobs') {
+                    selectJob(jobId);
+                } else if (view === 'recruiterPipeline') {
+                    state.pipelineSelectedJobId = jobId;
+                    // The view will re-render automatically on navigation
+                }
+            }
+            closeModal('notification-modal'); // Assuming a mobile modal might exist
+            document.getElementById('notification-dropdown').classList.add('hidden');
+        }
+
+        async function markNotificationsAsRead() {
+            const unreadNotifications = state.notifications.filter(n => !n.isRead);
+            if (unreadNotifications.length === 0) return;
+
+            const updatePromises = unreadNotifications.map(n => {
+                const notifDocRef = doc(db, "notifications", n.id);
+                return updateDoc(notifDocRef, { isRead: true });
+            });
+
+            try {
+                await Promise.all(updatePromises);
+            } catch (error) {
+                console.error("Error marking notifications as read: ", error);
+            }
+        }
+
+        function showToast(message) {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            const toastId = `toast-${Date.now()}`;
+            const toastHTML = `
+                <div id="${toastId}" class="toast bg-white rounded-lg shadow-lg p-4 max-w-sm w-full border-l-4 border-indigo-500">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 pt-0.5">
+                            <i data-lucide="info" class="w-5 h-5 text-indigo-500"></i>
+                        </div>
+                        <div class="ml-3 w-0 flex-1">
+                            <p class="text-sm font-medium text-slate-800">New Notification</p>
+                            <p class="mt-1 text-sm text-slate-600">${message}</p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0 flex">
+                            <button onclick="document.getElementById('${toastId}').remove()" class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <span class="sr-only">Close</span>
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            lucide.createIcons();
+            
+            const toastEl = document.getElementById(toastId);
+            setTimeout(() => {
+                toastEl.classList.add('show');
+            }, 10);
+
+            setTimeout(() => {
+                toastEl.classList.remove('show');
+                setTimeout(() => {
+                    if (toastEl) toastEl.remove();
+                }, 500);
+            }, 5000); // Hide after 5 seconds
+        }
 
         // --- ADMIN USER MANAGEMENT ---
         function showSuspendUserModal(userId, userName, isSuspended) {
@@ -3314,6 +3491,66 @@
             }
         }
 
+        // --- ADMIN JOB MANAGEMENT ---
+        function showAdminDeleteJobModal(jobId, jobTitle) {
+            const title = "Delete Job Post";
+            const message = `Are you sure you want to permanently delete the job post for "${jobTitle}"? This will also delete all applications and reports associated with it. This action cannot be undone.`;
+            const onConfirm = () => {
+                handleAdminDeleteJob(jobId);
+                closeModal('confirmation-modal');
+            };
+            showConfirmationModal(title, message, onConfirm, false, true, true, 'bg-red-600 hover:bg-red-700');
+        }
+
+        async function handleAdminDeleteJob(jobId) {
+            if (!jobId) {
+                console.error("No job ID provided for deletion.");
+                return;
+            }
+            console.log(`Attempting to delete job ${jobId} and all associated data.`);
+            const jobDocRef = doc(db, "jobs", jobId);
+
+            try {
+                // Delete associated applications
+                const appsQuery = query(collection(db, "applications"), where("jobId", "==", jobId));
+                const appsSnapshot = await getDocs(appsQuery);
+                const appDeletePromises = [];
+                appsSnapshot.forEach((doc) => {
+                    appDeletePromises.push(deleteDoc(doc.ref));
+                });
+                await Promise.all(appDeletePromises);
+                console.log(`${appDeletePromises.length} associated applications deleted.`);
+
+                // Delete associated reports
+                const reportsQuery = query(collection(db, "reports"), where("jobId", "==", jobId));
+                const reportsSnapshot = await getDocs(reportsQuery);
+                const reportDeletePromises = [];
+                reportsSnapshot.forEach((doc) => {
+                    reportDeletePromises.push(deleteDoc(doc.ref));
+                });
+                await Promise.all(reportDeletePromises);
+                console.log(`${reportDeletePromises.length} associated reports deleted.`);
+
+                // Delete the job document itself
+                await deleteDoc(jobDocRef);
+                console.log(`Successfully deleted job ${jobId}.`);
+                
+            } catch (error) {
+                console.error("Error deleting job and associated data: ", error);
+                showConfirmationModal("Deletion Failed", "There was an error deleting the job data.", () => closeModal('confirmation-modal'), false, true, false);
+            }
+        }
+
+        async function handleDismissReport(reportId) {
+            const reportDocRef = doc(db, "reports", reportId);
+            try {
+                await deleteDoc(reportDocRef);
+                console.log(`Report ${reportId} dismissed successfully.`);
+            } catch (error) {
+                console.error("Error dismissing report: ", error);
+            }
+        }
+
 
         // --- Make functions globally available ---
         window.handleNavigate = handleNavigate;
@@ -3362,6 +3599,9 @@
         window.handleDragLeave = handleDragLeave;
         window.showSuspendUserModal = showSuspendUserModal;
         window.showDeleteUserModal = showDeleteUserModal;
+        window.showAdminDeleteJobModal = showAdminDeleteJobModal;
+        window.handleDismissReport = handleDismissReport;
+        window.handleNotificationClick = handleNotificationClick;
 
 
         document.addEventListener('click', function(event) {
@@ -3376,7 +3616,31 @@
                 const loginDropdown = document.getElementById('login-dropdown');
                 if(loginDropdown) loginDropdown.classList.add('hidden');
             }
+
+            const notificationMenu = document.getElementById('notification-menu');
+            const notificationDropdown = document.getElementById('notification-dropdown');
+            if (notificationMenu && !notificationMenu.contains(event.target)) {
+                if (notificationDropdown) notificationDropdown.classList.add('hidden');
+            }
         });
+
+        // Add listeners for notification bell
+        document.getElementById('notification-button').addEventListener('click', () => {
+            document.getElementById('notification-dropdown').classList.toggle('hidden');
+            // If opening, mark as read
+            if (!document.getElementById('notification-dropdown').classList.contains('hidden')) {
+                markNotificationsAsRead();
+            }
+        });
+        
+        document.getElementById('mobile-notification-button').addEventListener('click', () => {
+            // For mobile, we might want a full-screen modal instead of a dropdown.
+            // For now, let's just log it and mark as read.
+            handleNavigate('notifications'); // A potential future view
+            markNotificationsAsRead();
+            console.log("Mobile notifications opened.");
+        });
+
 
         // --- FIREBASE REALTIME LISTENERS ---
         function listenToJobs() {
@@ -3454,10 +3718,12 @@
 
         let userListener = null;
         let applicationsListener = null;
+        let notificationsListener = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (userListener) userListener(); // Unsubscribe from previous user listener
             if (applicationsListener) applicationsListener(); // Unsubscribe from previous applications listener
+            if (notificationsListener) notificationsListener(); // Unsubscribe
 
 
             if (user) {
@@ -3500,6 +3766,7 @@
                         } else { // Recruiter or Admin
                             listenToAllApplications();
                         }
+                        listenToNotifications();
                         
                         // Check if it's the initial login to redirect
                         const isInitialLogin = !document.getElementById('user-menu').offsetParent;
@@ -3517,6 +3784,7 @@
                 state.currentUser = null;
                 state.savedJobs = [];
                 state.applications = [];
+                state.notifications = [];
                 handleNavigate('landing');
             }
         });
@@ -3551,6 +3819,39 @@
             });
         }
 
+        function listenToNotifications() {
+            if (notificationsListener) notificationsListener(); // Unsubscribe from previous listener
+            if (!state.currentUser) {
+                state.notifications = [];
+                updateHeader();
+                return;
+            }
+
+            const q = query(collection(db, "notifications"), where("userId", "==", state.currentUser.uid), orderBy("timestamp", "desc"));
+            notificationsListener = onSnapshot(q, (querySnapshot) => {
+                const oldNotifications = [...state.notifications];
+                const newNotifications = [];
+                querySnapshot.forEach((doc) => {
+                    newNotifications.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Check for new, unread notifications to show a toast
+                if (newNotifications.length > 0) {
+                     const latestNotification = newNotifications[0];
+                    const isAlreadyPresent = oldNotifications.some(n => n.id === latestNotification.id);
+                    // Only show toast if it's a genuinely new notification, not just a read status change
+                    const wasJustCreated = (getSimulatedNow().getTime() - latestNotification.timestamp.toDate().getTime()) < 5000; // 5s threshold
+
+                    if (!isAlreadyPresent && wasJustCreated) {
+                        showToast(latestNotification.message);
+                    }
+                }
+
+                state.notifications = newNotifications;
+                updateHeader();
+            });
+        }
+
 
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -3576,6 +3877,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
