@@ -8,11 +8,65 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        .cta-gradient-bg h2 {
+            color: #fff !important;
+        }
+        h2, h3, h4 {
+            color: #2e84a8 !important;
+        }
+        .cta-gradient-bg {
+            background: linear-gradient(90deg, #3facc9 0%, #0e7277 100%);
+        }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc; /* slate-50 */
         }
+        :root {
+            --theme-color: #3facc9;
+        }
+        .theme-bg {
+            background-color: var(--theme-color) !important;
+        }
+        .theme-text {
+            color: var(--theme-color) !important;
+        }
+        .theme-border {
+            border-color: var(--theme-color) !important;
+        }
+        .theme-btn, .btn-primary, .bg-indigo-600, .bg-indigo-700, .bg-indigo-100, .hover\:bg-indigo-700:hover, .hover\:bg-indigo-800:hover {
+            background-color: var(--theme-color) !important;
+            color: #fff !important;
+            border: none;
+        }
+        .theme-btn:hover, .btn-primary:hover, .hover\:bg-indigo-700:hover, .hover\:bg-indigo-800:hover {
+            background-color: #3496b0 !important;
+        }
+        .theme-link, .text-indigo-600, .hover\:text-indigo-600:hover, .hover\:text-indigo-800:hover {
+            color: var(--theme-color) !important;
+        }
+        .theme-link:hover, .hover\:text-indigo-800:hover {
+            color: #236b81 !important;
+        }
+        .focus\:ring-indigo-500:focus, .focus\:ring-indigo-600:focus, .focus\:border-indigo-500:focus, .focus\:border-indigo-600:focus {
+            --tw-ring-color: var(--theme-color) !important;
+            border-color: var(--theme-color) !important;
+        }
+        .bg-indigo-50, .bg-indigo-100 {
+            background-color: #e6f6fb !important;
+            color: var(--theme-color) !important;
+        }
+        .border-indigo-600, .border-indigo-500 {
+            border-color: var(--theme-color) !important;
+        }
+        .text-indigo-700 {
+            color: #236b81 !important;
+        }
+        .ring-indigo-500, .focus\:ring-indigo-500:focus {
+            --tw-ring-color: var(--theme-color) !important;
+        }
+        /* Hero background with overlay */
+        /* (reverted: removed hero-bg and overlay styles) */
         .view { display: none; }
         .view.active { display: block; }
         
@@ -30,6 +84,20 @@
             opacity: 1;
             transform: translateY(0) scale(1);
         }
+
+        /* Admin-style sidebar and quick-stats reusable styles */
+        .admin-sidebar-panel {
+            background-color: #f8fafc; /* slate-50 */
+            border-radius: 12px;
+            padding: 1rem;
+        }
+        .card-lg {
+            background: #ffffff;
+            border: 1px solid #e6edf3; /* subtle border */
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        .accent-purple { color: #7c6cf1; }
 
         .status-badge {
             padding: 4px 10px;
@@ -755,17 +823,37 @@
             `}).join('');
 
             views.landing.innerHTML = `
-                <!-- Hero Section -->
-                <div class="bg-white">
-                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight">Find Your Next Big Opportunity</h1>
-                        <p class="mt-4 max-w-2xl mx-auto text-lg text-slate-600">The premier platform for connecting top talent with innovative companies in South Africa.</p>
-                        <div class="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-4">
-                            <input type="text" placeholder="Job title, keywords, or company" class="flex-grow w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                            <button class="bg-indigo-600 text-white font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors" onclick="handleNavigate('findJobs')">Search Jobs</button>
-                        </div>
-                    </div>
-                </div>
+<!-- Hero Section -->
+<div 
+  class="relative bg-cover bg-center bg-no-repeat" 
+  style="background-image: url('pagebackgrounds.webp');"
+>
+  <!-- Overlay -->
+  <div class="absolute inset-0 bg-[#3facc9]/70"></div>
+
+  <!-- Content -->
+  <div class="relative container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight drop-shadow-lg">
+      Find Your Next Big Opportunity
+    </h1>
+    <p class="mt-4 max-w-2xl mx-auto text-lg text-white/90 drop-shadow">
+      The premier platform for connecting top talent with innovative companies in South Africa.
+    </p>
+    <div class="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-4">
+      <input 
+        type="text" 
+        placeholder="Job title, keywords, or company" 
+        class="flex-grow w-full px-4 py-3 rounded-lg border border-white/40 bg-white/20 text-white placeholder-white/80 focus:ring-2 focus:ring-white focus:border-white outline-none"
+      >
+      <button 
+        class="bg-white text-[#3facc9] font-medium px-6 py-3 rounded-lg shadow-md hover:bg-slate-100 transition-colors" 
+        onclick="handleNavigate('findJobs')"
+      >
+        Search Jobs
+      </button>
+    </div>
+  </div>
+</div>
 
                 <!-- Featured Jobs Section -->
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -802,14 +890,14 @@
                     </div>
                 </div>
                 
-                 <!-- Call to Action Section -->
-                <div class="bg-indigo-600">
+                <!-- Call to Action Section -->
+                <div class="cta-gradient-bg">
                     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
                         <h2 class="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
-                        <p class="text-indigo-200 mb-8 max-w-2xl mx-auto">Join thousands of job seekers and recruiters on the premier platform for talent in South Africa.</p>
+                        <p class="text-white mb-8 max-w-2xl mx-auto">Join thousands of job seekers and recruiters on the premier platform for talent in South Africa.</p>
                         <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                           <button onclick="showLoginModal('seeker', 'signup')" class="bg-white text-indigo-600 font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-slate-100 transition-colors w-full sm:w-auto">Sign Up as a Job Seeker</button>
-                           <button onclick="showLoginModal('recruiter', 'signup')" class="bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-indigo-800 transition-colors w-full sm:w-auto">Post a Job for Free</button>
+                           <button onclick="showLoginModal('seeker', 'signup')" class="bg-white theme-text font-medium px-6 py-3 rounded-lg shadow-sm hover:bg-slate-100 transition-colors w-full sm:w-auto">Sign Up as a Job Seeker</button>
+                           <button onclick="showLoginModal('recruiter', 'signup')" class="theme-btn font-medium px-6 py-3 rounded-lg shadow-sm transition-colors w-full sm:w-auto">Post a Job for Free</button>
                         </div>
                     </div>
                 </div>
@@ -898,23 +986,24 @@
 
             views.findJobs.innerHTML = `
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                     <div class="bg-white p-4 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row items-center gap-4">
-                         <div class="relative flex-grow w-full"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-slate-400"></i></div><input type="text" placeholder="Search by skill, title or company" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></div>
-                         <div class="relative flex-grow w-full"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="map-pin" class="w-5 h-5 text-slate-400"></i></div><input type="text" placeholder="Location, e.g., 'Pretoria'" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></div>
-                        <button class="w-full md:w-auto text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-6 py-2.5 rounded-lg text-sm transition-colors flex-shrink-0">Search</button>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="lg:col-span-1 ${listClasses}">
-                            <h2 class="text-xl font-bold text-slate-800 mb-4">Showing ${currentJobs.length} of ${state.jobs.length} Jobs</h2>
-                            <div class="space-y-3">${jobListHtml}</div>
-                             ${paginationHtml}
-                        </div>
-                        <div class="lg:col-span-1 ${detailsClasses}">
-                            ${jobDetailsHtml}
-                        </div>
-                    </div>
-                </div>`;
-            lucide.createIcons();
+                            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                                    <div class="card-lg mb-6 flex flex-col md:flex-row items-center gap-4">
+                                        <div class="relative flex-grow w-full"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-slate-400"></i></div><input type="text" placeholder="Search by skill, title or company" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></div>
+                                        <div class="relative flex-grow w-full"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="map-pin" class="w-5 h-5 text-slate-400"></i></div><input type="text" placeholder="Location, e.g., 'Pretoria'" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></div>
+                                        <button class="w-full md:w-auto text-white bg-indigo-600 hover:bg-indigo-700 font-medium px-6 py-2.5 rounded-lg text-sm transition-colors flex-shrink-0">Search</button>
+                                    </div>
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        <div class="lg:col-span-1 ${listClasses}">
+                                            <h2 class="text-xl font-bold text-slate-800 mb-4">Showing ${currentJobs.length} of ${state.jobs.length} Jobs</h2>
+                                            <div class="space-y-3">${jobListHtml}</div>
+                                            ${paginationHtml}
+                                        </div>
+                                        <div class="lg:col-span-1 ${detailsClasses}">
+                                            ${jobDetailsHtml}
+                                        </div>
+                                    </div>
+                            </div>`;
+            lucide.createIcons(); 
         }
 
         function renderSeekerDashboard() {
@@ -926,13 +1015,13 @@
             }, { applied: 0, viewed: 0, shortlisted: 0, interview: 0, rejected: 0, hired: 0 });
 
             const recommendedJobs = state.jobs.slice(3,6);
-
             views.seekerDashboard.innerHTML = `
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <div class="mb-8">
                         <h1 class="text-3xl font-bold text-slate-800">Welcome, ${state.currentUser.name}!</h1>
                         <p class="text-slate-500">Signed in as ${state.currentUser.email}</p>
                     </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                         <div class="bg-white p-6 rounded-xl border border-slate-200">
                             <h3 class="text-sm font-medium text-slate-500">Applications Sent</h3>
@@ -940,19 +1029,19 @@
                         </div>
                         <div class="bg-white p-6 rounded-xl border border-slate-200">
                             <h3 class="text-sm font-medium text-slate-500">Interviews Scheduled</h3>
-                            <p class="text-3xl font-bold text-slate-800 mt-2">1</p> <!-- Mock -->
+                            <p class="text-3xl font-bold text-slate-800 mt-2">1</p>
                         </div>
-                         <div class="bg-white p-6 rounded-xl border border-slate-200">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
                             <h3 class="text-sm font-medium text-slate-500">Jobs Saved</h3>
                             <p class="text-3xl font-bold text-slate-800 mt-2">${state.savedJobs.length}</p>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200">
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <main class="lg:col-span-3 bg-white p-6 rounded-xl border border-slate-200">
                             <h3 class="text-lg font-bold text-slate-800 mb-4">Recent Application Activity</h3>
-                             <div class="space-y-4">
-                                ${myApplications.slice(0,3).map(app => {
+                            <div class="space-y-4">
+                                ${myApplications.slice(0,6).map(app => {
                                     const job = state.jobs.find(j => j.id === app.jobId);
                                     return job ? `<div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50">
                                         <div class="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-500">${job.company.charAt(0)}</div>
@@ -960,29 +1049,30 @@
                                         <span class="status-badge status-${app.status}">${app.status}</span>
                                     </div>` : '';
                                 }).join('')}
-                             </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl border border-slate-200">
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">Application Status</h3>
-                            <canvas id="seeker-application-chart" class="max-h-60 mx-auto"></canvas>
-                        </div>
-                    </div>
-
-                     <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">Recommended For You</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                ${recommendedJobs.map(job => `
-                                    <div class="p-4 rounded-lg border hover:shadow-md cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
-                                        <h4 class="font-bold text-slate-800">${job.title}</h4>
-                                        <p class="text-sm text-slate-600">${job.company}</p>
-                                        <p class="text-xs text-slate-500 mt-1">${job.location}</p>
-                                    </div>
-                                `).join('')}
                             </div>
-                       </div>
-                </div>
-            `;
-            
+                            <div class="mt-6">
+                                <h4 class="text-sm font-medium text-slate-600 mb-2">Recommended For You</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    ${recommendedJobs.map(job => `
+                                        <div class="p-3 rounded-lg border hover:shadow-sm cursor-pointer" onclick="handleNavigate('findJobs'); selectJob('${job.id}');">
+                                            <h4 class="font-semibold text-slate-800 text-sm">${job.title}</h4>
+                                            <p class="text-xs text-slate-500">${job.company} • ${job.location}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </main>
+                        <aside class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Stats</h3>
+                            <dl class="grid gap-4">
+                                <div class="flex items-center justify-between"><span class="text-sm text-slate-600">Job Seekers</span><span class="font-semibold">${state.candidates.length}</span></div>
+                                <div class="flex items-center justify-between"><span class="text-sm text-slate-600">Recruiters</span><span class="font-semibold">${state.allUsers ? Object.values(state.allUsers).filter(u=>u.type==='recruiter').length : 0}</span></div>
+                                <div class="flex items-center justify-between"><span class="text-sm text-slate-600">Saved Jobs</span><span class="font-semibold">${state.savedJobs.length}</span></div>
+                            </dl>
+                        </aside>
+                    </div>
+                </div>`;
+
             // This needs to be delayed slightly to ensure the canvas element is in the DOM
             setTimeout(() => {
                 const ctx = document.getElementById('seeker-application-chart');
@@ -1034,7 +1124,7 @@
             views.seekerApplications.innerHTML = `
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <h1 class="text-3xl font-bold text-slate-800 mb-8">My Applications</h1>
-                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="card-lg overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left min-w-[640px]">
                                 <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider"><tr><th class="p-4">Job Title</th><th class="p-4">Company</th><th class="p-4">Date Applied</th><th class="p-4">Status</th><th class="p-4"></th></tr></thead>
@@ -1252,60 +1342,64 @@
 
             views.recruiterDashboard.innerHTML = `
                  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                     <div class="mb-8">
-                         <h1 class="text-3xl font-bold text-slate-800">Recruiter Dashboard</h1>
-                         <p class="text-slate-500">For ${state.currentUser.name} (${state.currentUser.email})</p>
-                     </div>
-                     
-                     <!-- Stat Cards -->
-                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                         <div class="bg-white p-6 rounded-xl border border-slate-200">
-                             <h3 class="text-sm font-medium text-slate-500">Active Jobs</h3>
-                             <p class="text-3xl font-bold text-slate-800 mt-2">${recruiterJobs.length}</p>
-                         </div>
-                         <div class="bg-white p-6 rounded-xl border border-slate-200">
-                             <h3 class="text-sm font-medium text-slate-500">Total Applicants</h3>
-                             <p class="text-3xl font-bold text-slate-800 mt-2">${recruiterApplications.length}</p>
-                         </div>
-                         <div class="bg-white p-6 rounded-xl border border-slate-200">
-                             <h3 class="text-sm font-medium text-slate-500">New Applicants (7 days)</h3>
-                             <p class="text-3xl font-bold text-slate-800 mt-2">${newApplicants}</p>
-                         </div>
-                     </div>
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-slate-800">Recruiter Dashboard</h1>
+                        <p class="text-slate-500">For ${state.currentUser.name} (${state.currentUser.email})</p>
+                    </div>
 
-                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                         <!-- Application Trends -->
-                         <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200">
-                              <h3 class="text-lg font-bold text-slate-800 mb-4">Application Trends (Last 7 Days)</h3>
-                              <canvas id="application-chart"></canvas>
-                         </div>
-                         
-                         <!-- Recent Applicants -->
-                         <div class="bg-white rounded-xl border border-slate-200">
-                             <h3 class="text-lg font-bold text-slate-800 p-6 border-b">Recent Applicants</h3>
-                             <div class="p-6 space-y-4">
-                                 ${recentApplicantsDetails.length > 0 ? recentApplicantsDetails.map(({candidate, job}) => `
-                                     <div class="flex items-center gap-4">
-                                         <div class="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-500">${candidate.name.charAt(0)}</div>
-                                         <div><p class="font-semibold text-sm">${candidate.name}</p><p class="text-xs text-slate-500">Applied for ${job.title}</p></div>
-                                     </div>
-                                 `).join('') : '<p class="text-sm text-slate-500">No recent applicants.</p>' }
-                             </div>
-                         </div>
-                     </div>
-                      <!-- Jobs Closing Soon -->
-                       <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200">
-                           <h3 class="text-lg font-bold text-slate-800 mb-4">Jobs Nearing Closing Date</h3>
-                           <div class="space-y-2">
-                           ${jobsClosingSoon.length > 0 ? jobsClosingSoon.map(job => {
-                               const daysLeft = Math.ceil((job.closingDate.toDate() - now) / (1000 * 60 * 60 * 24));
-                               return `<div onclick="selectRecruiterJobAndNavigate('${job.id}')" class="flex justify-between items-center p-3 -m-3 rounded-lg cursor-pointer hover:bg-slate-50">
-                                   <p class="font-medium text-slate-800">${job.title}</p>
-                                   <p class="text-sm text-red-600">${daysLeft} day${daysLeft > 1 ? 's' : ''} left</p>
-                               </div>`;
-                           }).join('') : '<p class="text-slate-500 text-sm">No jobs are closing soon.</p>'}
-                           </div>
-                       </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Active Jobs</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${recruiterJobs.length}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">Total Applicants</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${recruiterApplications.length}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-medium text-slate-500">New Applicants (7 days)</h3>
+                            <p class="text-3xl font-bold text-slate-800 mt-2">${newApplicants}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <main class="lg:col-span-3 bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Application Trends (Last 7 Days)</h3>
+                            <canvas id="application-chart"></canvas>
+                            <div class="mt-6">
+                                <h4 class="text-sm font-medium text-slate-600 mb-2">Jobs Nearing Closing Date</h4>
+                                <div class="space-y-2">
+                                ${jobsClosingSoon.length > 0 ? jobsClosingSoon.map(job => {
+                                    const daysLeft = Math.ceil((job.closingDate.toDate() - now) / (1000 * 60 * 60 * 24));
+                                    return `<div onclick="selectRecruiterJobAndNavigate('${job.id}')" class="flex justify-between items-center p-3 -m-3 rounded-lg cursor-pointer hover:bg-slate-50">
+                                        <p class="font-medium text-slate-800">${job.title}</p>
+                                        <p class="text-sm text-red-600">${daysLeft} day${daysLeft > 1 ? 's' : ''} left</p>
+                                    </div>`;
+                                }).join('') : '<p class="text-slate-500 text-sm">No jobs are closing soon.</p>'}
+                                </div>
+                            </div>
+                        </main>
+
+                        <aside class="bg-white p-6 rounded-xl border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Stats</h3>
+                            <dl class="grid gap-4">
+                                <div class="flex items-center justify-between"><span class="text-sm text-slate-600">Active Jobs</span><span class="font-semibold">${recruiterJobs.length}</span></div>
+                                <div class="flex items-center justify-between"><span class="text-sm text-slate-600">Applicants</span><span class="font-semibold">${recruiterApplications.length}</span></div>
+                                <div class="flex items-center justify-between"><span class="text-sm text-slate-600">New (7d)</span><span class="font-semibold">${newApplicants}</span></div>
+                            </dl>
+                            <div class="mt-6">
+                                <h4 class="text-sm font-medium text-slate-600 mb-2">Recent Applicants</h4>
+                                <div class="space-y-3">
+                                    ${recentApplicantsDetails.length > 0 ? recentApplicantsDetails.map(({candidate, job}) => `
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">${candidate.name.charAt(0)}</div>
+                                            <div class="text-sm"><div class="font-medium">${candidate.name}</div><div class="text-xs text-slate-500">${job.title}</div></div>
+                                        </div>
+                                    `).join('') : '<p class="text-sm text-slate-500">No recent applicants.</p>'}
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
                  </div>
             `;
 
@@ -1803,15 +1897,16 @@
                     <td class="p-4 text-slate-600">${t.subject}</td>
                     <td class="p-4 text-slate-500 truncate max-w-xs">${t.body.replace(/<[^>]+>/g, '').slice(0, 60)}${t.body.length > 60 ? '…' : ''}</td>
                     <td class="p-4 text-right">
-                        <button class="text-indigo-600 hover:underline mr-4" onclick="showEmailTemplateModal('edit', '${t.id}')"><i data-lucide='edit-3' class='w-4 h-4'></i> Edit</button>
-                        <button class="text-red-600 hover:underline" onclick="confirmDeleteEmailTemplate('${t.id}')"><i data-lucide='trash-2' class='w-4 h-4'></i> Delete</button>
+                        <button data-action="edit" data-id="${t.id}" class="text-indigo-600 hover:underline mr-4"><i data-lucide='edit-3' class='w-4 h-4'></i> Edit</button>
+                        <button data-action="test" data-id="${t.id}" class="text-slate-600 hover:underline mr-4"><i data-lucide='send' class='w-4 h-4'></i> Test</button>
+                        <button data-action="delete" data-id="${t.id}" class="text-red-600 hover:underline"><i data-lucide='trash-2' class='w-4 h-4'></i> Delete</button>
                     </td>
                 </tr>
             `).join('') : `<tr><td colspan="4" class="text-center p-8 text-slate-500">No email templates found.</td></tr>`;
             return `
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-slate-700">Email Templates</h2>
-                    <button class="bg-indigo-600 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 flex items-center gap-2" onclick="showEmailTemplateModal('add')"><i data-lucide='plus-circle' class='w-5 h-5'></i>New Template</button>
+                    <button id="new-email-template-btn" class="bg-indigo-600 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 flex items-center gap-2"><i data-lucide='plus-circle' class='w-5 h-5'></i>New Template</button>
                 </div>
                 <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                     <table class="min-w-full divide-y divide-slate-200">
@@ -1829,11 +1924,73 @@
             `;
         }
 
+        // Attach event handlers for edit/delete/new template buttons using event delegation
+        function attachEmailTemplateEventHandlers() {
+            const container = document.getElementById('admin-dashboard-view');
+            if (!container) return;
+            // Attach once
+            if (container._emailTemplateHandlerAttached) return;
+            container._emailTemplateHandlerAttached = true;
+
+            container.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action]');
+                if (btn) {
+                    const action = btn.getAttribute('data-action');
+                    const id = btn.getAttribute('data-id');
+                    if (action === 'edit') {
+                        showEmailTemplateModal('edit', id);
+                    } else if (action === 'delete') {
+                        confirmDeleteEmailTemplate(id);
+                    } else if (action === 'test') {
+                        sendTestEmailTemplate(id);
+                    }
+                    return;
+                }
+
+                // New template button (by id)
+                const newBtn = e.target.closest('#new-email-template-btn');
+                if (newBtn) {
+                    showEmailTemplateModal('add');
+                }
+            });
+        // Send a test email using the selected template to thomas2craft@gmail.com
+        async function sendTestEmailTemplate(templateId) {
+            const template = state.emailTemplates.find(t => t.id === templateId);
+            if (!template) {
+                showToast('Template not found.', 'error');
+                return;
+            }
+            // Replace variables with dummy values for preview
+            let body = template.body
+                .replace(/\{\{name\}\}/g, 'Thomas')
+                .replace(/\{\{job_title\}\}/g, 'Sample Job')
+                .replace(/\{\{company\}\}/g, 'JobAccess')
+                .replace(/\{\{verification_link\}\}/g, 'https://jobaccess.co.za/verify')
+                .replace(/\{\{reset_link\}\}/g, 'https://jobaccess.co.za/reset');
+            try {
+                await addDoc(collection(db, 'emailQueue'), {
+                    to: 'thomas2craft@gmail.com',
+                    subject: `[TEST] ${template.subject}`,
+                    body: body,
+                    status: 'queued',
+                    createdAt: Timestamp.now(),
+                    meta: { queuedBy: state.currentUser ? state.currentUser.uid : 'admin', templateId }
+                });
+                showToast('Test email queued to thomas2craft@gmail.com', 'success');
+            } catch (err) {
+                showToast('Failed to queue test email.', 'error');
+                console.error(err);
+            }
+        }
+        }
+
         async function loadEmailTemplates() {
             const q = query(collection(db, 'emailTemplates'));
             const snapshot = await getDocs(q);
             state.emailTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderAdminDashboard();
+            // Ensure handlers are attached after render
+            setTimeout(() => attachEmailTemplateEventHandlers(), 0);
         }
 
         function showEmailTemplateModal(mode, id = null) {
@@ -1858,7 +2015,7 @@
                             <textarea name="body" rows="6" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">${template.body}</textarea>
                         </div>
                         <div class="flex justify-end gap-2">
-                            <button type="button" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300" onclick="closeModal()">Cancel</button>
+                            <button type="button" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300" onclick="document.getElementById('confirmation-modal').classList.remove('active'); setTimeout(()=>{document.getElementById('confirmation-modal').classList.add('hidden');document.getElementById('confirmation-modal').querySelector('.modal-content').innerHTML='';},300)">Cancel</button>
                             <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-indigo-700">${mode === 'add' ? 'Add' : 'Save'}</button>
                         </div>
                     </form>
@@ -1900,7 +2057,7 @@
                     <h2 class="text-xl font-bold mb-4 text-red-600">Delete Email Template</h2>
                     <p>Are you sure you want to delete the template <span class="font-semibold">${template.name}</span>?</p>
                     <div class="flex justify-end gap-2 mt-6">
-                        <button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300" onclick="closeModal()">Cancel</button>
+                        <button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300" onclick="document.getElementById('confirmation-modal').classList.remove('active'); setTimeout(()=>{document.getElementById('confirmation-modal').classList.add('hidden');document.getElementById('confirmation-modal').querySelector('.modal-content').innerHTML='';},300)">Cancel</button>
                         <button class="bg-red-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-red-700" onclick="deleteEmailTemplate('${id}')">Delete</button>
                     </div>
                 </div>
@@ -1909,23 +2066,37 @@
         }
 
         async function deleteEmailTemplate(id) {
-            await deleteDoc(doc(db, 'emailTemplates', id));
-            closeModal();
-            await loadEmailTemplates();
-            showToast('Email template deleted.', 'success');
+            console.log('Attempting to delete email template with id:', id);
+            try {
+                await deleteDoc(doc(db, 'emailTemplates', id));
+                closeModal();
+                await loadEmailTemplates();
+                showToast('Email template deleted.', 'success');
+            } catch (err) {
+                console.error('Failed to delete email template:', err);
+                showToast('Failed to delete email template: ' + err.message, 'error');
+            }
         }
+        window.deleteEmailTemplate = deleteEmailTemplate;
 
         // --- Modal helpers ---
         function showModal(html) {
             const modal = document.getElementById('confirmation-modal');
             modal.querySelector('.modal-content').innerHTML = html;
             modal.classList.remove('hidden');
+            // Add active class for animation
+            setTimeout(() => modal.classList.add('active'), 10);
         }
         function closeModal() {
             const modal = document.getElementById('confirmation-modal');
-            modal.classList.add('hidden');
-            modal.querySelector('.modal-content').innerHTML = '';
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.querySelector('.modal-content').innerHTML = '';
+            }, 300); // match CSS transition duration
         }
+
+                // ...existing code...
 
 
             views.adminDashboard.innerHTML = `
@@ -1950,6 +2121,11 @@
             // Re-render chart if on overview tab
             if(state.adminActiveTab === 'overview'){
                  renderAdminOverviewChart();
+            }
+            // Attach email template handlers when on that tab
+            if (state.adminActiveTab === 'emailTemplates') {
+                // slight delay to ensure DOM is painted
+                setTimeout(() => attachEmailTemplateEventHandlers(), 0);
             }
         }
 
@@ -3573,18 +3749,26 @@
             }
         }
 
-        function showToast(message) {
+        function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
             if (!toastContainer) return;
             const toastId = `toast-${Date.now()}`;
+            let icon = 'info', border = 'border-indigo-500', iconColor = 'text-indigo-500', title = 'Notification';
+            if (type === 'success') {
+                icon = 'check-circle'; border = 'border-emerald-500'; iconColor = 'text-emerald-500'; title = 'Success';
+            } else if (type === 'error') {
+                icon = 'x-circle'; border = 'border-red-500'; iconColor = 'text-red-500'; title = 'Error';
+            } else if (type === 'warning') {
+                icon = 'alert-triangle'; border = 'border-amber-500'; iconColor = 'text-amber-500'; title = 'Warning';
+            }
             const toastHTML = `
-                <div id="${toastId}" class="toast bg-white rounded-lg shadow-lg p-4 max-w-sm w-full border-l-4 border-indigo-500">
+                <div id="${toastId}" class="toast bg-white rounded-lg shadow-lg p-4 max-w-full w-full border-l-4 ${border}">
                     <div class="flex items-start">
                         <div class="flex-shrink-0 pt-0.5">
-                            <i data-lucide="info" class="w-5 h-5 text-indigo-500"></i>
+                            <i data-lucide="${icon}" class="w-5 h-5 ${iconColor}"></i>
                         </div>
-                        <div class="ml-3 w-0 flex-1">
-                            <p class="text-sm font-medium text-slate-800">New Notification</p>
+                        <div class="ml-3 w-full">
+                            <p class="text-sm font-medium text-slate-800">${title}</p>
                             <p class="mt-1 text-sm text-slate-600">${message}</p>
                         </div>
                         <div class="ml-4 flex-shrink-0 flex">
@@ -3598,18 +3782,16 @@
             `;
             toastContainer.insertAdjacentHTML('beforeend', toastHTML);
             lucide.createIcons();
-            
             const toastEl = document.getElementById(toastId);
             setTimeout(() => {
                 toastEl.classList.add('show');
             }, 10);
-
             setTimeout(() => {
                 toastEl.classList.remove('show');
                 setTimeout(() => {
                     if (toastEl) toastEl.remove();
                 }, 500);
-            }, 5000); // Hide after 5 seconds
+            }, 5000);
         }
 
         // --- ADMIN USER MANAGEMENT ---
