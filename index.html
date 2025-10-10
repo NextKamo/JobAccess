@@ -765,14 +765,14 @@
             // --- Update User Dropdown ---
             if(state.currentUser) {
                 let dropdownHtml = `<p class="block px-4 py-2 text-sm text-gray-700 font-bold truncate">${state.currentUser.name}</p>`;
-                if(state.currentUser.type === 'seeker'){
-                    dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('dashboard')">Dashboard</a>`;
-                    dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('seekerSavedJobs')">Saved Jobs</a>`;
-                } else if (state.currentUser.type === 'recruiter') { // Recruiter
-                     dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('recruiterDashboard')">Dashboard</a>`;
-                } else { // Admin
-                     dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('adminDashboard')">Dashboard</a>`;
-                }
+             if(state.currentUser.type === 'seeker'){
+                dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('settings')">Profile</a>`;
+                dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('seekerSavedJobs')">Saved Jobs</a>`;
+             } else if (state.currentUser.type === 'recruiter') { // Recruiter
+                 dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('settings')">Profile</a>`;
+             } else { // Admin
+                 dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('adminDashboard')">Dashboard</a>`;
+             }
                 dropdownHtml += `<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleNavigate('settings')">Settings</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" onclick="handleLogout()">Sign out</a>`;
                 userDropdown.innerHTML = dropdownHtml;
@@ -2617,8 +2617,10 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
         }
 
         function renderAdminOverview() {
-            const totalUsers = Object.keys(state.allUsers).length;
-            const userCounts = Object.values(state.allUsers).reduce((acc, user) => {
+            // Exclude admin users from total and userCounts
+            const nonAdminUsers = Object.values(state.allUsers).filter(u => u.type !== 'admin');
+            const totalUsers = nonAdminUsers.length;
+            const userCounts = nonAdminUsers.reduce((acc, user) => {
                 acc[user.type] = (acc[user.type] || 0) + 1;
                 return acc;
             }, { seeker: 0, recruiter: 0 });
@@ -2682,25 +2684,90 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
         }
 
         function renderAdminUsersTable() {
-            const users = Object.entries(state.allUsers).map(([id, data]) => ({ id, ...data }));
+            // --- Filter State ---
+            if (!state.adminUserFilter) state.adminUserFilter = { type: 'all', search: '' };
+            const filter = state.adminUserFilter;
+
+            // --- Filter Controls ---
+            const filterHtml = `
+                <div class="flex flex-col md:flex-row gap-3 p-4 bg-slate-50 border-b items-center">
+                    <div>
+                        <label class="text-xs font-medium text-slate-500 mr-2">Type:</label>
+                        <select id="admin-user-type-filter" class="rounded-md border-slate-300 text-sm">
+                            <option value="all" ${filter.type === 'all' ? 'selected' : ''}>All</option>
+                            <option value="seeker" ${filter.type === 'seeker' ? 'selected' : ''}>Job Seeker</option>
+                            <option value="recruiter" ${filter.type === 'recruiter' ? 'selected' : ''}>Recruiter</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 w-full max-w-xs">
+                        <input id="admin-user-search" type="text" placeholder="Search by name or email" value="${filter.search || ''}" class="w-full rounded-md border-slate-300 text-sm px-3 py-2" />
+                    </div>
+                </div>
+            `;
+
+            // --- Filtered Users ---
+            let users = Object.entries(state.allUsers).map(([id, data]) => ({ id, ...data }));
+            if (filter.type !== 'all') {
+                users = users.filter(u => u.type === filter.type);
+            }
+            if (filter.search && filter.search.trim() !== '') {
+                const s = filter.search.trim().toLowerCase();
+                users = users.filter(u => (u.name && u.name.toLowerCase().includes(s)) || (u.email && u.email.toLowerCase().includes(s)));
+            }
+
             const usersHtml = users.map(user => {
                 const isSuspended = user.suspended === true;
+                const isAdmin = user.type === 'admin';
                 return `
                 <tr class="hover:bg-slate-50 ${isSuspended ? 'bg-red-50 text-slate-500' : ''}">
-                    <td class="p-4">${user.name} ${isSuspended ? '<span class="text-xs font-semibold text-red-600">(Suspended)</span>' : ''}</td>
+                    <td class="p-4">${user.name} ${isSuspended ? '<span class=\"text-xs font-semibold text-red-600\">(Suspended)</span>' : ''}</td>
                     <td class="p-4">${user.email}</td>
-                    <td class="p-4"><span class="status-badge ${user.type === 'seeker' ? 'status-applied' : 'status-hired'}">${user.type}</span></td>
+                    <td class="p-4"><span class="status-badge ${user.type === 'seeker' ? 'status-applied' : user.type === 'recruiter' ? 'status-hired' : 'status-viewed'}">${user.type}</span></td>
                     <td class="p-4">${user.joinedDate ? user.joinedDate.toDate().toLocaleDateString('en-ZA') : 'N/A'}</td>
                     <td class="p-4 flex gap-2 justify-end">
-                        <button onclick="showSuspendUserModal('${user.id}', '${user.name.replace(/'/g, "\\'")}', ${isSuspended})" class="text-sm font-medium ${isSuspended ? 'text-emerald-600 hover:text-emerald-800' : 'text-amber-600 hover:text-amber-800'}">
-                            ${isSuspended ? 'Unsuspend' : 'Suspend'}
-                        </button>
-                        <button onclick="showDeleteUserModal('${user.id}', '${user.name.replace(/'/g, "\\'")}')" class="text-sm font-medium text-red-600 hover:text-red-800">Delete</button>
+                        ${!isAdmin ? `
+                        <button onclick=\"showSuspendUserModal('${user.id}', '${user.name.replace(/'/g, "\\'")}', ${isSuspended})\" class=\"text-sm font-medium ${isSuspended ? 'text-emerald-600 hover:text-emerald-800' : 'text-amber-600 hover:text-amber-800'}\">${isSuspended ? 'Unsuspend' : 'Suspend'}</button>
+                        <button onclick=\"showDeleteUserModal('${user.id}', '${user.name.replace(/'/g, "\\'")}')\" class=\"text-sm font-medium text-red-600 hover:text-red-800\">Delete</button>
+                        ` : '<span class=\"text-xs text-slate-400\">Admin</span>'}
                     </td>
                 </tr>
-            `}).join('');
+            `;
+            }).join('');
+            setTimeout(() => {
+                const typeFilter = document.getElementById('admin-user-type-filter');
+                if (typeFilter) {
+                    typeFilter.onchange = (e) => {
+                        state.adminUserFilter.type = e.target.value;
+                        renderAdminDashboard();
+                    };
+                }
+                const searchInput = document.getElementById('admin-user-search');
+                if (searchInput) {
+                    searchInput.oninput = (e) => {
+                        state.adminUserFilter.search = e.target.value;
+                        renderAdminDashboard();
+                    };
+                }
+            }, 0);
+            // --- User Counts ---
+            // Exclude admin users from counts
+            const allUsersArr = Object.values(state.allUsers).filter(u => u.type !== 'admin');
+            const seekerCount = allUsersArr.filter(u => u.type === 'seeker').length;
+            const recruiterCount = allUsersArr.filter(u => u.type === 'recruiter').length;
+            const totalCount = allUsersArr.length;
+
+            const countSummaryHtml = `
+                <div class="flex flex-wrap gap-4 px-4 pt-4 pb-2">
+                    <div class="bg-indigo-50 rounded-lg px-4 py-2 text-indigo-700 font-semibold text-sm">Total Users: ${totalCount}</div>
+                    <div class="bg-slate-100 rounded-lg px-4 py-2 text-slate-700 font-semibold text-sm">Job Seekers: ${seekerCount}</div>
+                    <div class="bg-slate-100 rounded-lg px-4 py-2 text-slate-700 font-semibold text-sm">Recruiters: ${recruiterCount}</div>
+                </div>
+            `;
+
             return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <h3 class="text-lg font-bold text-slate-800 p-4 border-b">Manage Users</h3>
+                ${countSummaryHtml}
+                ${filterHtml}
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><th class="p-4 text-left">Name</th><th class="p-4 text-left">Email</th><th class="p-4 text-left">Type</th><th class="p-4 text-left">Joined</th><th class="p-4 text-right">Actions</th></thead>
