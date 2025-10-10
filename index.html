@@ -960,12 +960,7 @@
         placeholder="Job title, keywords, or company" 
         class="flex-grow w-full px-4 py-3 rounded-lg border border-white/40 bg-white shadow-md text-[#2e84a8] placeholder-[#3facc9]/80 focus:ring-2 focus:ring-[#3facc9] focus:border-[#3facc9] outline-none"
             >
-            <button 
-                class="bg-white text-[#3facc9] font-medium px-6 py-3 rounded-lg shadow-md hover:bg-slate-100 transition-colors" 
-                onclick="handleNavigate('findJobs')"
-            >
-                Search Jobs
-            </button>
+            <button class="w-full md:w-auto text-white bg-[#ff6f61] hover:bg-[#ff3b1f] font-medium px-6 py-2.5 rounded-lg text-sm transition-colors flex-shrink-0">Search</button>
         </div>
     </div>
 </div>
@@ -1684,6 +1679,9 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
         function renderCvDatabasePage() {
             const searchTerm = state.cvSearchTerm.toLowerCase();
             const { experience, location, jobType, skills } = state.cvFilters;
+            // pagination defaults
+            if (!state.cvPage || state.cvPage < 1) state.cvPage = 1;
+            if (!state.cvPageSize) state.cvPageSize = 9; // 3 columns x 3 rows
             
             let filteredCandidates = state.candidates.filter(candidate => {
                 const nameMatch = candidate.name.toLowerCase().includes(searchTerm);
@@ -1701,8 +1699,17 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                 return (nameMatch || generalSkillsMatch) && experienceMatch && locationMatch && jobTypeMatch && specificSkillsMatch;
             });
             
-            const candidatesHtml = filteredCandidates.map(candidate => `
-            <div class="bg-white p-6 rounded-xl border border-slate-200 flex flex-col">
+            // compute pagination values
+            const total = filteredCandidates.length;
+            const totalPages = Math.max(1, Math.ceil(total / state.cvPageSize));
+            // clamp page
+            if (state.cvPage > totalPages) state.cvPage = totalPages;
+            const startIdx = (state.cvPage - 1) * state.cvPageSize;
+            const endIdx = startIdx + state.cvPageSize;
+            const pageCandidates = filteredCandidates.slice(startIdx, endIdx);
+
+            const candidatesHtml = pageCandidates.map(candidate => `
+            <div class="bg-white p-6 rounded-xl border border-slate-200 flex flex-col h-full">
                 <div>
                     <h3 class="font-bold text-lg text-slate-800">${candidate.name}</h3>
                     <p class="text-sm text-slate-500 mt-1">${candidate.experience || '0'} years of experience</p>
@@ -1734,19 +1741,76 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="scrollable-job-cards flex flex-col gap-6">
-                        ${filteredCandidates.length > 0 ? candidatesHtml : '<p class="text-slate-500 md:col-span-3">No candidates match your search criteria.</p>'}
-                    </div>
+                    ${pageCandidates.length > 0 
+                        ? candidatesHtml 
+                        : '<p class="col-span-full text-slate-500">No candidates match your search criteria.</p>'}
                 </div>
+                ${total > state.cvPageSize ? `
+                <div class="mt-8 flex items-center justify-between gap-4">
+                    <div class="text-sm text-slate-600">Showing ${startIdx + 1}-${Math.min(endIdx, total)} of ${total} candidates</div>
+                    <div class="inline-flex items-center gap-1" id="cv-pagination"></div>
+                </div>` : ''}
             </div>`;
 
             const searchInput = document.getElementById('cv-search-input');
             searchInput.addEventListener('input', (e) => {
                 state.cvSearchTerm = e.target.value;
+                state.cvPage = 1; // reset to first page on search
                 renderCvDatabasePage();
             });
 
+            // build pagination buttons if needed
+            if (document.getElementById('cv-pagination')) {
+                const container = document.getElementById('cv-pagination');
+                const btn = (label, onClick, active=false, disabled=false) => `
+                    <button ${disabled ? 'disabled' : ''} onclick="${onClick}" class="px-3 py-1.5 rounded-md text-sm border ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}">${label}</button>`;
+
+                const parts = [];
+                // prev
+                parts.push(btn('Prev', `prevCvPage()`, false, state.cvPage === 1));
+
+                const makePageBtn = (p) => btn(p, `goToCvPage(${p})`, state.cvPage === p);
+                const maxButtons = 7;
+                if (totalPages <= maxButtons) {
+                    for (let p = 1; p <= totalPages; p++) parts.push(makePageBtn(p));
+                } else {
+                    const current = state.cvPage;
+                    const showLeftEllipsis = current > 4;
+                    const showRightEllipsis = current < totalPages - 3;
+                    parts.push(makePageBtn(1));
+                    if (showLeftEllipsis) parts.push('<span class="px-2 text-slate-500">…</span>');
+                    const start = Math.max(2, current - 1);
+                    const end = Math.min(totalPages - 1, current + 1);
+                    for (let p = start; p <= end; p++) parts.push(makePageBtn(p));
+                    if (showRightEllipsis) parts.push('<span class="px-2 text-slate-500">…</span>');
+                    parts.push(makePageBtn(totalPages));
+                }
+
+                // next
+                parts.push(btn('Next', `nextCvPage()`, false, state.cvPage === totalPages));
+
+                container.innerHTML = parts.join('');
+            }
+
             lucide.createIcons();
+        }
+
+        // Pagination handlers for CV Database
+        function goToCvPage(p) {
+            const page = parseInt(p, 10);
+            if (!Number.isFinite(page)) return;
+            state.cvPage = Math.max(1, page);
+            renderCvDatabasePage();
+        }
+
+        function prevCvPage() {
+            state.cvPage = Math.max(1, (state.cvPage || 1) - 1);
+            renderCvDatabasePage();
+        }
+
+        function nextCvPage() {
+            state.cvPage = (state.cvPage || 1) + 1;
+            renderCvDatabasePage();
         }
 
         function renderSubscriptionPage() {
