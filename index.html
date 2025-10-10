@@ -927,7 +927,33 @@
                         <a href="#" onclick="handleNavigate('findJobs')" class="font-medium text-indigo-600 hover:text-indigo-800">View all jobs &rarr;</a>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${jobListingsHtml}
+                        <div class="featured-jobs-scroll flex gap-6 overflow-x-auto pb-2">
+                            <div class="min-w-[280px] max-w-xs bg-white p-6 rounded-xl border-2 border-dashed border-[#3facc9] flex flex-col items-center justify-center hover:shadow-lg transition-shadow cursor-pointer flex-shrink-0" onclick="showPostJobModal()">
+                                <i data-lucide="plus-circle" class="w-12 h-12 text-[#3facc9] mb-2"></i>
+                                <h3 class="font-bold text-lg text-[#3facc9] mb-1">Post a New Job</h3>
+                                <p class="text-slate-500 text-center text-sm mb-2">Share an opportunity with the community.</p>
+                                <button class="theme-btn font-medium px-6 py-2 rounded-lg shadow-sm transition-colors mt-2">Post Job</button>
+                            </div>
+                            ${jobListingsHtml}
+                        </div>
+        .featured-jobs-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 400px;
+            scrollbar-width: thin;
+            scrollbar-color: #3facc9 #e6f6fb;
+        }
+        .featured-jobs-scroll::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .featured-jobs-scroll::-webkit-scrollbar-thumb {
+            background: #3facc9;
+            border-radius: 4px;
+        }
+        .featured-jobs-scroll::-webkit-scrollbar-track {
+            background: #e6f6fb;
+        }
                     </div>
                 </div>
 
