@@ -199,19 +199,35 @@
         /* Kanban board styles */
         .kanban-board {
             display: flex;
-            gap: 1.5rem; /* gap-6 */
+            gap: 1.5rem;
             overflow-x: auto;
-            padding-bottom: 1rem; /* pb-4 */
+            padding-bottom: 1rem;
         }
         .kanban-column {
-            flex: 0 0 320px; /* w-80 */
-            max-width: 320px;
+            min-width: 220px;
+            flex: 1;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 1rem;
+            box-shadow: 0 2px 8px 0 rgba(30,41,59,0.04);
+            border: 1px solid #e2e8f0;
+            margin: 0 0.5rem;
         }
         .kanban-cards {
-            min-height: 200px;
+            min-height: 60px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 0.25rem;
         }
         .kanban-card {
             cursor: grab;
+            background: #fff;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 4px 0 rgba(30,41,59,0.04);
+            transition: box-shadow 0.2s;
+        }
+        .kanban-card:hover {
+            box-shadow: 0 4px 16px 0 rgba(99,102,241,0.10);
         }
         .kanban-card:active {
             cursor: grabbing;
@@ -921,76 +937,48 @@
                  </div>
             `}).join('');
 
-            views.landing.innerHTML = `
+                        views.landing.innerHTML = `
 <!-- Hero Section -->
 <div 
-  class="relative bg-cover bg-center bg-no-repeat" 
-  style="background-image: url('pagebackgrounds.webp');"
+    class="relative bg-cover bg-center bg-no-repeat" 
+    style="background-image: url('pagebackgrounds.webp');"
 >
-  <!-- Overlay -->
-  <div class="absolute inset-0 bg-[#3facc9]/70"></div>
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-[#3facc9]/70"></div>
 
-  <!-- Content -->
-  <div class="relative container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight drop-shadow-lg">
-    <span style="color:#fff;">Find Your Next Big Opportunity</span>
-    </h1>
-    <p class="mt-4 max-w-2xl mx-auto text-lg text-white/90 drop-shadow">
-      The premier platform for connecting top talent with innovative companies in South Africa.
-    </p>
-    <div class="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-4">
-      <input 
-    type="text" 
-    placeholder="Job title, keywords, or company" 
-    class="flex-grow w-full px-4 py-3 rounded-lg border border-white/40 bg-white shadow-md text-[#2e84a8] placeholder-[#3facc9]/80 focus:ring-2 focus:ring-[#3facc9] focus:border-[#3facc9] outline-none"
-      >
-      <button 
-        class="bg-white text-[#3facc9] font-medium px-6 py-3 rounded-lg shadow-md hover:bg-slate-100 transition-colors" 
-        onclick="handleNavigate('findJobs')"
-      >
-        Search Jobs
-      </button>
+    <!-- Content -->
+    <div class="relative container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight drop-shadow-lg">
+        <span style="color:#fff;">Find Your Next Big Opportunity</span>
+        </h1>
+        <p class="mt-4 max-w-2xl mx-auto text-lg text-white/90 drop-shadow">
+            The premier platform for connecting top talent with innovative companies in South Africa.
+        </p>
+        <div class="mt-8 max-w-2xl mx-auto flex flex-col sm:flex-row gap-4">
+            <input 
+        type="text" 
+        placeholder="Job title, keywords, or company" 
+        class="flex-grow w-full px-4 py-3 rounded-lg border border-white/40 bg-white shadow-md text-[#2e84a8] placeholder-[#3facc9]/80 focus:ring-2 focus:ring-[#3facc9] focus:border-[#3facc9] outline-none"
+            >
+            <button 
+                class="bg-white text-[#3facc9] font-medium px-6 py-3 rounded-lg shadow-md hover:bg-slate-100 transition-colors" 
+                onclick="handleNavigate('findJobs')"
+            >
+                Search Jobs
+            </button>
+        </div>
     </div>
-  </div>
 </div>
 
-                <!-- Featured Jobs Section -->
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                    <div class="flex justify-between items-center mb-8">
-                        <h2 class="text-3xl font-bold text-slate-800">Featured Jobs</h2>
-                        <a href="#" onclick="handleNavigate('findJobs')" class="font-medium text-indigo-600 hover:text-indigo-800">View all jobs &rarr;</a>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="featured-jobs-scroll flex flex-col gap-6 overflow-y-auto max-h-[400px] pb-2">
-                            <div class="min-w-[280px] max-w-xs bg-white p-6 rounded-xl border-2 border-dashed border-[#3facc9] flex flex-col items-center justify-center hover:shadow-lg transition-shadow cursor-pointer flex-shrink-0" onclick="showPostJobModal()">
-                        <!-- Apply scrollable-job-cards to all job card grids below -->
-                                <i data-lucide="plus-circle" class="w-12 h-12 text-[#3facc9] mb-2"></i>
-                                <h3 class="font-bold text-lg text-[#3facc9] mb-1">Post a New Job</h3>
-                                <p class="text-slate-500 text-center text-sm mb-2">Share an opportunity with the community.</p>
-                                <button class="theme-btn font-medium px-6 py-2 rounded-lg shadow-sm transition-colors mt-2">Post Job</button>
-                            </div>
-                            <div class="scrollable-job-cards flex flex-col gap-6">
-                                ${jobListingsHtml}
-                            </div>
-                        </div>
-        .featured-jobs-scroll {
-            overflow-x: auto;
-            overflow-y: auto;
-            max-height: 400px;
-            scrollbar-width: thin;
-            scrollbar-color: #3facc9 #e6f6fb;
-        }
-        .featured-jobs-scroll::-webkit-scrollbar {
-            height: 8px;
-            width: 8px;
-        }
-        .featured-jobs-scroll::-webkit-scrollbar-thumb {
-            background: #3facc9;
-            border-radius: 4px;
-        }
-        .featured-jobs-scroll::-webkit-scrollbar-track {
-            background: #e6f6fb;
-        }
+                                <!-- Featured Jobs Section -->
+                                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                                        <div class="flex justify-between items-center mb-8">
+                                                <h2 class="text-3xl font-bold text-slate-800">Featured Jobs</h2>
+                                                <a href="#" onclick="handleNavigate('findJobs')" class="font-medium text-indigo-600 hover:text-indigo-800">View all jobs &rarr;</a>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                ${jobListingsHtml}
+                                        </div>
                     </div>
                 </div>
 
@@ -1386,13 +1374,15 @@
 
             filteredApplications.forEach(app => {
                 const candidate = state.candidates.find(c => c.id === app.candidateId);
-                const user = state.allUsers[app.candidateId]; // Fallback for name/email
+                const user = state.allUsers[app.candidateId];
+                const job = state.jobs.find(j => j.id === app.jobId);
                 if (candidate || user) {
-                    const applicantData = { 
+                    const applicantData = {
                         ...app,
                         name: candidate?.name || user?.name,
                         photoURL: candidate?.photoURL || user?.photoURL,
-                        initials: (candidate?.name || user?.name || '?').split(' ').map(n=>n[0]).join('')
+                        initials: (candidate?.name || user?.name || '?').split(' ').map(n=>n[0]).join(''),
+                        jobTitle: job ? job.title : '',
                     };
                     if (pipelineColumns[app.status]) {
                         pipelineColumns[app.status].push(applicantData);
@@ -1402,38 +1392,50 @@
 
             const jobOptionsHtml = recruiterJobs.map(job => `<option value="${job.id}" ${state.pipelineSelectedJobId === job.id ? 'selected' : ''}>${job.title}</option>`).join('');
 
-            const renderColumn = (title, applicants) => `
-                <div class="kanban-column bg-slate-100 rounded-xl p-4">
-                    <h3 class="font-semibold text-slate-700 mb-4 uppercase text-sm tracking-wider">${title} (${applicants.length})</h3>
-                    <div class="kanban-cards space-y-4" data-status="${title.toLowerCase()}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+            // Modern Kanban column renderer
+            const renderColumn = (title, applicants, statusKey) => `
+                <div class="kanban-column flex-1 min-w-[220px] bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl p-4 shadow-md border border-slate-200 mx-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="block w-2 h-2 rounded-full ${statusKey==='applied'?'bg-slate-400':statusKey==='viewed'?'bg-blue-400':statusKey==='shortlisted'?'bg-amber-400':statusKey==='interview'?'bg-indigo-500':statusKey==='hired'?'bg-green-500':'bg-slate-300'}"></span>
+                        <h3 class="font-semibold text-slate-700 uppercase text-xs tracking-wider">${title} <span class="ml-1 text-slate-400 font-normal">(${applicants.length})</span></h3>
+                    </div>
+                    <div class="kanban-cards flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1" data-status="${statusKey}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
                         ${applicants.map(app => `
-                            <div class="kanban-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm" draggable="true" data-application-id="${app.id}" ondragstart="handleDragStart(event)">
-                                <p class="font-semibold text-slate-800">${app.name}</p>
-                                <button onclick="showCandidateDetails('${app.candidateId}')" class="text-xs text-indigo-600 hover:underline mt-1">View Profile</button>
+                            <div class="kanban-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 cursor-grab transition hover:shadow-lg" draggable="true" data-application-id="${app.id}" ondragstart="handleDragStart(event)">
+                                <div class="flex items-center gap-3">
+                                    <div>
+                                        <p class="font-medium text-slate-700 text-sm leading-tight">${app.name}</p>
+                                        <p class="text-xs text-slate-500">${app.email || ''}</p>
+                                        <p class="text-xs text-slate-400 mt-1">Job: <span class="font-medium">${app.jobTitle || ''}</span></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <button onclick="showCandidateDetails('${app.candidateId}')" class="text-xs text-indigo-600 hover:underline">View Profile</button>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
                 </div>
             `;
-            
+
             views.recruiterPipeline.innerHTML = `
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                     <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-                         <h1 class="text-3xl font-bold text-slate-800">Applicant Pipeline</h1>
-                         <div class="w-full sm:w-64">
-                             <select id="pipeline-job-filter" class="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                 <option value="all" ${state.pipelineSelectedJobId === 'all' ? 'selected' : ''}>All Jobs</option>
-                                 ${jobOptionsHtml}
-                             </select>
-                         </div>
-                     </div>
-                     <div class="kanban-board">
-                        ${renderColumn('Applied', pipelineColumns.applied)}
-                        ${renderColumn('Viewed', pipelineColumns.viewed)}
-                        ${renderColumn('Shortlisted', pipelineColumns.shortlisted)}
-                        ${renderColumn('Interview', pipelineColumns.interview)}
-                        ${renderColumn('Hired', pipelineColumns.hired)}
-                     </div>
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+                        <h1 class="text-3xl font-bold text-slate-800">Applicant Pipeline</h1>
+                        <div class="w-full sm:w-64">
+                            <select id="pipeline-job-filter" class="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="all" ${state.pipelineSelectedJobId === 'all' ? 'selected' : ''}>All Jobs</option>
+                                ${jobOptionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="kanban-board flex flex-col md:flex-row gap-4 md:gap-0 overflow-x-auto pb-4">
+                        ${renderColumn('Applied', pipelineColumns.applied, 'applied')}
+                        ${renderColumn('Viewed', pipelineColumns.viewed, 'viewed')}
+                        ${renderColumn('Shortlisted', pipelineColumns.shortlisted, 'shortlisted')}
+                        ${renderColumn('Interview', pipelineColumns.interview, 'interview')}
+                        ${renderColumn('Hired', pipelineColumns.hired, 'hired')}
+                    </div>
                 </div>
             `;
 
@@ -1607,7 +1609,12 @@
 
         async function handleDrop(event) {
             event.preventDefault();
-            const column = event.target.closest('.kanban-cards');
+            // Always use the kanban-cards container as drop target, even if dropping on empty space or between cards
+            let column = event.target;
+            // If dropping on a card or child, walk up to .kanban-cards
+            while (column && !column.classList?.contains('kanban-cards')) {
+                column = column.parentElement;
+            }
             if (!column) return;
 
             column.parentElement.classList.remove('drag-over');
@@ -1616,10 +1623,16 @@
 
             const application = state.applications.find(app => app.id === applicationId);
             if (application && application.status !== newStatus) {
+                // Optimistically update the status in local state for immediate UI feedback
+                application.status = newStatus;
+                // Force a re-render to keep DOM and state in sync and prevent freezing
+                if (typeof renderRecruiterPipelinePage === 'function') {
+                    renderRecruiterPipelinePage();
+                }
+                // Now update in Firestore
                 try {
                     const appDocRef = doc(db, "applications", applicationId);
                     await updateDoc(appDocRef, { status: newStatus });
-                    
                     // Create notification for the job seeker
                     const applicant = state.candidates.find(c => c.id === application.candidateId);
                     const job = state.jobs.find(j => j.id === application.jobId);
@@ -1631,13 +1644,12 @@
                     console.error("Error updating application status: ", error);
                     showConfirmationModal("Update Failed", "Could not update applicant status. Please try again.", () => closeModal('confirmation-modal'), false, true, false);
                 }
-            }
-
-            const draggedEl = document.querySelector(`[data-application-id="${applicationId}"]`);
-            if (draggedEl) {
-                draggedEl.classList.remove('dragging');
-                // The onSnapshot will handle re-rendering, but for immediate feedback:
-                column.appendChild(draggedEl);
+            } else {
+                // If not a valid move, just remove dragging class
+                const draggedEl = document.querySelector(`[data-application-id="${applicationId}"]`);
+                if (draggedEl) {
+                    draggedEl.classList.remove('dragging');
+                }
             }
         }
 
