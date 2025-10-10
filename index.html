@@ -1094,7 +1094,20 @@
             const reportButtonHtml = `<div class="p-6 text-center text-xs text-slate-400">
                 <a href="#" onclick="showReportJobModal('${selectedJob ? selectedJob.id : ''}')" class="inline-flex items-center hover:text-red-600 hover:underline"><i data-lucide="flag" class="w-3 h-3 mr-1"></i>Report this job</a>
             </div>`;
-            const jobDetailsHtml = selectedJob ? `${window.innerWidth < 1024 ? backButtonHtml : ''}<div class="bg-white rounded-xl border border-slate-200 h-full flex flex-col job-list-container"><div class="p-6 border-b sticky top-0 bg-white"><div class="flex flex-col sm:flex-row justify-between items-start gap-4"><div class="flex items-start gap-4 flex-grow"><img src="${companyLogoUrlForDetails}" alt="${selectedJob.company} logo" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x100/e2e8f0/475569?text=${selectedJob.company.charAt(0)}'"/><div><h2 class="text-xl font-bold text-slate-800">${selectedJob.title}</h2><p class="text-slate-600 font-medium mt-1">${selectedJob.company}</p><p class="text-sm text-slate-500">${selectedJob.location} &bull; <span class="text-slate-400">${postedDateDetails}</span></p><p class="text-sm font-semibold text-emerald-600 mt-1">${selectedJob.salary || 'Market Related'}</p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p><span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${selectedJob.type}</span></div></div><button onclick="handleApply('${selectedJob.id}')" ${(hasApplied || isRecruiterOrAdmin) ? 'disabled' : ''} class="bg-indigo-600 text-white font-medium px-6 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex-shrink-0 w-full sm:w-auto disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div></div><div class="p-6 overflow-y-auto flex-grow"><h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Job Description</h3><p class="text-slate-600 whitespace-pre-wrap leading-relaxed">${selectedJob.description}</p></div>${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-center h-full bg-white rounded-xl border border-slate-200 text-slate-500">Select a job to view details</div>`;
+const jobDetailsHtml = selectedJob ? `${window.innerWidth < 1024 ? backButtonHtml : ''}<div class="bg-white rounded-xl border border-slate-200 h-full flex flex-col job-list-container"><div class="p-6 border-b sticky top-0 bg-white"><div class="flex flex-col sm:flex-row justify-between items-start gap-4"><div class="flex items-start gap-4 flex-grow"><img src="${companyLogoUrlForDetails}" alt="${selectedJob.company} logo" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x100/e2e8f0/475569?text=${selectedJob.company.charAt(0)}'"/><div><h2 class="text-xl font-bold text-slate-800">${selectedJob.title}</h2><p class="text-slate-600 font-medium mt-1">${selectedJob.company}</p><p class="text-sm text-slate-500">${selectedJob.location} &bull; <span class="text-slate-400">${postedDateDetails}</span></p><p class="text-sm font-semibold text-emerald-600 mt-1">${selectedJob.salary || 'Market Related'}</p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p><span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${selectedJob.type}</span></div></div><button onclick="handleApply('${selectedJob.id}')" ${(hasApplied || isRecruiterOrAdmin) ? 'disabled' : ''} class="bg-indigo-600 text-white font-medium px-6 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex-shrink-0 w-full sm:w-auto disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div></div>
+<div class="p-6 overflow-y-auto flex-grow">
+  <h3 class="font-semibold text-slate-800 mb-3 uppercase text-sm tracking-wider">Job Description</h3>
+  <p class="text-slate-600 whitespace-pre-wrap leading-relaxed">${selectedJob.description}</p>
+  <div class="mt-6">
+    <h4 class="font-semibold text-slate-800 mb-1 uppercase text-base tracking-wide">🧠 Key Responsibilities</h4>
+    ${selectedJob.responsibilities ? `<ul class='list-disc pl-6 mb-4 text-slate-600'>${selectedJob.responsibilities.split(/\r?\n|•|\*/).filter(line => line.trim()).map(line => `<li>${line.trim()}</li>`).join('')}</ul>` : "<span class='text-slate-400'>Not specified</span>"}
+    <h4 class="font-semibold text-slate-800 mb-1 uppercase text-base tracking-wide">🎓 Qualifications & Experience</h4>
+    ${selectedJob.qualifications ? `<ul class='list-disc pl-6 mb-4 text-slate-600'>${selectedJob.qualifications.split(/\r?\n|•|\*/).filter(line => line.trim()).map(line => `<li>${line.trim()}</li>`).join('')}</ul>` : "<span class='text-slate-400'>Not specified</span>"}
+    <h4 class="font-semibold text-slate-800 mb-1 uppercase text-base tracking-wide">🧩 Skills & Competencies</h4>
+    ${selectedJob.skills ? `<ul class='list-disc pl-6 mb-4 text-slate-600'>${selectedJob.skills.split(/\r?\n|•|\*/).filter(line => line.trim()).map(line => `<li>${line.trim()}</li>`).join('')}</ul>` : "<span class='text-slate-400'>Not specified</span>"}
+ </div>
+</div>
+${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-center h-full bg-white rounded-xl border border-slate-200 text-slate-500">Select a job to view details</div>`;
 
             const isMobile = window.innerWidth < 1024;
             const listClasses = isMobile && state.mobileShowDetails ? 'hidden' : 'block';
@@ -1394,12 +1407,17 @@
 
             // Modern Kanban column renderer
             const renderColumn = (title, applicants, statusKey) => `
-                <div class="kanban-column flex-1 min-w-[220px] bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl p-4 shadow-md border border-slate-200 mx-2">
+                <div class="kanban-column flex-1 min-w-[220px] bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl p-4 shadow-md border border-slate-200 mx-2 relative">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="block w-2 h-2 rounded-full ${statusKey==='applied'?'bg-slate-400':statusKey==='viewed'?'bg-blue-400':statusKey==='shortlisted'?'bg-amber-400':statusKey==='interview'?'bg-indigo-500':statusKey==='hired'?'bg-green-500':'bg-slate-300'}"></span>
                         <h3 class="font-semibold text-slate-700 uppercase text-xs tracking-wider">${title} <span class="ml-1 text-slate-400 font-normal">(${applicants.length})</span></h3>
                     </div>
-                    <div class="kanban-cards flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1" data-status="${statusKey}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+                    <div class="kanban-cards flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1" data-status="${statusKey}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" style="min-height: 120px; min-height: 6rem;">
+                        <div class="kanban-drop-indicator absolute inset-0 flex items-center justify-center pointer-events-none z-10" style="display:none;">
+                            <div class="bg-white/80 rounded-full p-2 border-2 border-green-500 flex items-center justify-center shadow-lg">
+                                <svg xmlns='http://www.w3.org/2000/svg' class='w-8 h-8 text-green-500' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='3'><path stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4L19 7'/></svg>
+                            </div>
+                        </div>
                         ${applicants.map(app => `
                             <div class="kanban-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 cursor-grab transition hover:shadow-lg" draggable="true" data-application-id="${app.id}" ondragstart="handleDragStart(event)">
                                 <div class="flex items-center gap-3">
@@ -1414,6 +1432,7 @@
                                 </div>
                             </div>
                         `).join('')}
+                        <div style="flex:1;min-height:32px;"></div>
                     </div>
                 </div>
             `;
@@ -1597,13 +1616,19 @@
             const column = event.target.closest('.kanban-cards');
             if (column) {
                 column.parentElement.classList.add('drag-over');
+                // Show green check indicator
+                const dropIndicator = column.querySelector('.kanban-drop-indicator');
+                if (dropIndicator) dropIndicator.style.display = 'flex';
             }
         }
 
         function handleDragLeave(event) {
             const column = event.target.closest('.kanban-cards');
             if (column) {
-                 column.parentElement.classList.remove('drag-over');
+                column.parentElement.classList.remove('drag-over');
+                // Hide green check indicator
+                const dropIndicator = column.querySelector('.kanban-drop-indicator');
+                if (dropIndicator) dropIndicator.style.display = 'none';
             }
         }
 
@@ -1618,6 +1643,9 @@
             if (!column) return;
 
             column.parentElement.classList.remove('drag-over');
+            // Hide green check indicator
+            const dropIndicator = column.querySelector('.kanban-drop-indicator');
+            if (dropIndicator) dropIndicator.style.display = 'none';
             const applicationId = event.dataTransfer.getData("text/plain");
             const newStatus = column.dataset.status;
 
@@ -2174,15 +2202,8 @@
                 const data = {
                     name: form.name.value.trim(),
                     subject: form.subject.value.trim(),
-                    body: form.body.value.trim(),
+                    body: form.body.value.trim()
                 };
-                if (mode === 'add') {
-                    await addEmailTemplate(data);
-                } else {
-                    await updateEmailTemplate(id, data);
-                }
-                closeModal();
-                await loadEmailTemplates();
                 showToast('Email template saved!', 'success');
             };
         }
@@ -2655,7 +2676,18 @@
                 <a href="#" onclick="showReportJobModal('${job.id}')" class="inline-flex items-center hover:text-red-600 hover:underline"><i data-lucide="flag" class="w-3 h-3 mr-1"></i>Report this job</a>
             </div>`;
             const closingDateDetails = job.closingDate ? `Closes ${job.closingDate.toDate().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}` : '';
-            modalContent.innerHTML = `<div class="p-8 border-b"><div class="flex justify-between items-start"><div><h2 class="text-2xl font-bold text-slate-800">${job.title}</h2><p class="text-slate-600 font-medium mt-1">${job.company} - <span class="text-slate-500 font-normal">${job.location}</span></p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p></div><button onclick="closeModal('job-details-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button></div></div><div class="p-8 overflow-y-auto"><h3 class="font-bold text-slate-800 mb-2">Job Description</h3><p class="text-slate-600 whitespace-pre-wrap">${job.description}</p></div><div class="p-6 bg-slate-50 border-t mt-auto"><button onclick="handleApply('${job.id}')" ${(hasApplied || isRecruiterOrAdmin) ? 'disabled' : ''} class="w-full bg-indigo-600 text-white font-medium py-3 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div>${reportButtonHtml}`;
+            modalContent.innerHTML = `<div class="p-8 border-b"><div class="flex justify-between items-start"><div><h2 class="text-2xl font-bold text-slate-800">${job.title}</h2><p class="text-slate-600 font-medium mt-1">${job.company} - <span class="text-slate-500 font-normal">${job.location}</span></p><p class="text-sm text-red-600 font-medium mt-1">${closingDateDetails}</p></div><button onclick="closeModal('job-details-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button></div></div><div class="p-8 overflow-y-auto">
+                <h3 class="font-bold text-slate-800 mb-2">🧠 Key Responsibilities</h3>
+                <p class="text-slate-600 whitespace-pre-wrap mb-4">${job.responsibilities ? job.responsibilities : '<span class=\'text-slate-400\'>Not specified</span>'}</p>
+                <h3 class="font-bold text-slate-800 mb-2">🎓 Qualifications & Experience</h3>
+                <p class="text-slate-600 whitespace-pre-wrap mb-4">${job.qualifications ? job.qualifications : '<span class=\'text-slate-400\'>Not specified</span>'}</p>
+                <h3 class="font-bold text-slate-800 mb-2">🧩 Skills & Competencies</h3>
+                <p class="text-slate-600 whitespace-pre-wrap mb-4">${job.skills ? job.skills : '<span class=\'text-slate-400\'>Not specified</span>'}</p>
+                <h3 class="font-bold text-slate-800 mb-2">💰 Salary Range</h3>
+                <p class="text-slate-600 whitespace-pre-wrap mb-4">${job.salary ? job.salary : '<span class=\'text-slate-400\'>Not specified</span>'}</p>
+                <h3 class="font-bold text-slate-800 mb-2">Job Description</h3>
+                <p class="text-slate-600 whitespace-pre-wrap">${job.description}</p>
+            </div><div class="p-6 bg-slate-50 border-t mt-auto"><button onclick="handleApply('${job.id}')" ${(hasApplied || isRecruiterOrAdmin) ? 'disabled' : ''} class="w-full bg-indigo-600 text-white font-medium py-3 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">${hasApplied ? 'Applied' : 'Apply Now'}</button></div>${reportButtonHtml}`;
             lucide.createIcons();
             showModal(jobDetailsModalEl);
         }
@@ -3111,7 +3143,7 @@
                                     </select>
                                 </div>
                             </div>
-                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label for="job-type" class="block text-sm font-medium text-slate-700">Job Type</label>
                                     <select id="job-type" name="type" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
@@ -3128,9 +3160,21 @@
                                     <input type="date" id="job-closing-date" name="closingDate" required min="${today}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                 </div>
                             </div>
-                             <div>
-                                <label for="job-salary" class="block text-sm font-medium text-slate-700">Salary Range (Optional)</label>
+                            <div>
+                                <label for="job-salary" class="block text-sm font-medium text-slate-700">💰 Salary Range (Optional)</label>
                                 <input type="text" id="job-salary" name="salary" placeholder="e.g., R30,000 - R40,000 per month" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="job-responsibilities" class="block text-sm font-medium text-slate-700">🧠 Key Responsibilities</label>
+                                <textarea id="job-responsibilities" name="responsibilities" rows="6" placeholder="List the main duties (6–10 bullet points)" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            </div>
+                            <div>
+                                <label for="job-qualifications" class="block text-sm font-medium text-slate-700">🎓 Qualifications & Experience</label>
+                                <textarea id="job-qualifications" name="qualifications" rows="4" placeholder="e.g., Degree, certifications, years of experience" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            </div>
+                            <div>
+                                <label for="job-skills" class="block text-sm font-medium text-slate-700">🧩 Skills & Competencies</label>
+                                <textarea id="job-skills" name="skills" rows="4" placeholder="e.g., Communication, teamwork, technical skills" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                             </div>
                             <div>
                                 <label for="job-description" class="block text-sm font-medium text-slate-700">Job Description</label>
@@ -3160,7 +3204,6 @@
             const typeOptions = jobTypes.map(t => `<option ${t === job.type ? 'selected' : ''}>${t}</option>`).join('');
             const today = getSimulatedNow().toISOString().split('T')[0];
             const closingDateValue = job.closingDate ? job.closingDate.toDate().toISOString().split('T')[0] : '';
-
 
             const modalContent = postJobModalEl.querySelector('.modal-content');
             modalContent.innerHTML = `
@@ -3196,14 +3239,26 @@
                                         ${typeOptions}
                                     </select>
                                 </div>
-                                 <div>
+                                <div>
                                     <label for="job-closing-date" class="block text-sm font-medium text-slate-700">Closing Date</label>
                                     <input type="date" id="job-closing-date" name="closingDate" value="${closingDateValue}" required min="${today}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                 </div>
                             </div>
-                             <div>
-                                <label for="job-salary" class="block text-sm font-medium text-slate-700">Salary Range (Optional)</label>
+                            <div>
+                                <label for="job-salary" class="block text-sm font-medium text-slate-700">💰 Salary Range (Optional)</label>
                                 <input type="text" id="job-salary" name="salary" value="${job.salary || ''}" placeholder="e.g., R30,000 - R40,000 per month" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="job-responsibilities" class="block text-sm font-medium text-slate-700">🧠 Key Responsibilities</label>
+                                <textarea id="job-responsibilities" name="responsibilities" rows="6" placeholder="List the main duties (6–10 bullet points)" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${job.responsibilities || ''}</textarea>
+                            </div>
+                            <div>
+                                <label for="job-qualifications" class="block text-sm font-medium text-slate-700">🎓 Qualifications & Experience</label>
+                                <textarea id="job-qualifications" name="qualifications" rows="4" placeholder="e.g., Degree, certifications, years of experience" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${job.qualifications || ''}</textarea>
+                            </div>
+                            <div>
+                                <label for="job-skills" class="block text-sm font-medium text-slate-700">🧩 Skills & Competencies</label>
+                                <textarea id="job-skills" name="skills" rows="4" placeholder="e.g., Communication, teamwork, technical skills" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${job.skills || ''}</textarea>
                             </div>
                             <div>
                                 <label for="job-description" class="block text-sm font-medium text-slate-700">Job Description</label>
@@ -3233,6 +3288,8 @@
                 location: `${city}, ${province}`,
                 type: formData.get('type'),
                 description: formData.get('description'),
+                qualifications: formData.get('qualifications') || '',
+                skills: formData.get('skills') || '',
                 closingDate: Timestamp.fromDate(new Date(formData.get('closingDate'))),
                 salary: formData.get('salary') || ''
             };
@@ -3312,17 +3369,20 @@
             const formData = new FormData(event.target);
             const city = formData.get('city');
             const province = formData.get('province');
-            const newJob = {
-                title: formData.get('title'),
-                location: `${city}, ${province}`,
-                type: formData.get('type'),
-                description: formData.get('description'),
-                company: state.currentUser.name, // Use recruiter's company name
-                recruiterId: state.currentUser.uid,
-                postedDate: Timestamp.fromDate(getSimulatedNow()),
-                closingDate: Timestamp.fromDate(new Date(formData.get('closingDate'))),
-                salary: formData.get('salary') || ''
-            };
+                const newJob = {
+                    title: formData.get('title'),
+                    location: `${city}, ${province}`,
+                    type: formData.get('type'),
+                    description: formData.get('description'),
+                    responsibilities: formData.get('responsibilities') || '',
+                    qualifications: formData.get('qualifications') || '',
+                    skills: formData.get('skills') || '',
+                    company: state.currentUser.name, // Use recruiter's company name
+                    recruiterId: state.currentUser.uid,
+                    postedDate: Timestamp.fromDate(getSimulatedNow()),
+                    closingDate: Timestamp.fromDate(new Date(formData.get('closingDate'))),
+                    salary: formData.get('salary') || ''
+                };
 
             try {
                 const docRef = await addDoc(collection(db, "jobs"), newJob);
