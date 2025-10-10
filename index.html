@@ -1713,8 +1713,13 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                 <div>
                     <h3 class="font-bold text-lg text-slate-800">${candidate.name}</h3>
                     <p class="text-sm text-slate-500 mt-1">${candidate.experience || '0'} years of experience</p>
-                    <p class="text-sm text-slate-500 mt-1">${candidate.location || 'Not specified'}</p>
+                    <p class="text-sm text-slate-500 mt-1">${(() => { const city = candidate.city || candidate.locationCity; const province = candidate.province || candidate.state || candidate.region; const country = candidate.country; const parts = [city, province, country].filter(Boolean); return parts.length ? parts.join(', ') : (candidate.location || 'Not specified'); })()}</p>
                     <span class="mt-2 inline-block text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">${candidate.jobType || 'Full-time'}</span>
+                    <p class="text-sm text-slate-600 mt-3"><span class="font-medium">Desired Role:</span> ${candidate.desiredRole || candidate.jobTitle || 'Not specified'}</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <span class="inline-flex items-center gap-1 text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>${candidate.availability || 'Availability N/A'}</span>
+                        <span class="inline-flex items-center gap-1 text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md"><i data-lucide="wallet" class="w-3.5 h-3.5 text-slate-400"></i>${candidate.expectedSalaryRange || candidate.salaryExpectation || 'Salary N/A'}</span>
+                    </div>
                 </div>
                 <div class="flex-grow mt-4">
                     <div class="flex flex-wrap gap-2">
@@ -1858,6 +1863,7 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
             switch (state.settingsActiveTab) {
                 case 'profile':
                     contentHtml = `
+                    <div id="profile-completion-meter" class="mb-6"></div>
                     <form id="profile-form">
                         <h2 class="text-2xl font-bold text-slate-800">Public Profile</h2>
                         <p class="text-slate-500 mt-1 mb-6">This information will be displayed on your public profile.</p>
@@ -1881,7 +1887,38 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                                 <label class="block text-sm font-medium text-slate-700">Email Address</label>
                                 <input type="email" value="${state.currentUser.email || ''}" disabled class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm bg-slate-50 text-slate-500 cursor-not-allowed">
                             </div>
-                            <div><label class="block text-sm font-medium text-slate-700">Location</label><input name="location" type="text" value="${userProfile.location || ''}" placeholder="e.g. Pretoria, Gauteng" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Location (City, Province, Country)</label>
+                                <input name="city" type="text" value="${userProfile.city || ''}" placeholder="City" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 mb-2">
+                                <select name="province" class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 mb-2">
+                                    <option value="" disabled ${!userProfile.province ? 'selected' : ''}>Select Province/State</option>
+                                    <option value="Eastern Cape" ${userProfile.province === 'Eastern Cape' ? 'selected' : ''}>Eastern Cape</option>
+                                    <option value="Free State" ${userProfile.province === 'Free State' ? 'selected' : ''}>Free State</option>
+                                    <option value="Gauteng" ${userProfile.province === 'Gauteng' ? 'selected' : ''}>Gauteng</option>
+                                    <option value="KwaZulu-Natal" ${userProfile.province === 'KwaZulu-Natal' ? 'selected' : ''}>KwaZulu-Natal</option>
+                                    <option value="Limpopo" ${userProfile.province === 'Limpopo' ? 'selected' : ''}>Limpopo</option>
+                                    <option value="Mpumalanga" ${userProfile.province === 'Mpumalanga' ? 'selected' : ''}>Mpumalanga</option>
+                                    <option value="North West" ${userProfile.province === 'North West' ? 'selected' : ''}>North West</option>
+                                    <option value="Northern Cape" ${userProfile.province === 'Northern Cape' ? 'selected' : ''}>Northern Cape</option>
+                                    <option value="Western Cape" ${userProfile.province === 'Western Cape' ? 'selected' : ''}>Western Cape</option>
+                                    <option value="Other" ${userProfile.province === 'Other' ? 'selected' : ''}>Other</option>
+                                </select>
+                                <select name="country" class="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="" disabled ${!userProfile.country ? 'selected' : ''}>Select Country</option>
+                                    <option value="South Africa" ${userProfile.country === 'South Africa' ? 'selected' : ''}>South Africa</option>
+                                    <option value="Namibia" ${userProfile.country === 'Namibia' ? 'selected' : ''}>Namibia</option>
+                                    <option value="Botswana" ${userProfile.country === 'Botswana' ? 'selected' : ''}>Botswana</option>
+                                    <option value="Zimbabwe" ${userProfile.country === 'Zimbabwe' ? 'selected' : ''}>Zimbabwe</option>
+                                    <option value="Mozambique" ${userProfile.country === 'Mozambique' ? 'selected' : ''}>Mozambique</option>
+                                    <option value="Lesotho" ${userProfile.country === 'Lesotho' ? 'selected' : ''}>Lesotho</option>
+                                    <option value="Eswatini" ${userProfile.country === 'Eswatini' ? 'selected' : ''}>Eswatini</option>
+                                    <option value="Other" ${userProfile.country === 'Other' ? 'selected' : ''}>Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Job Title / Desired Role</label>
+                                <input name="desiredRole" type="text" value="${userProfile.desiredRole || userProfile.jobTitle || ''}" placeholder="e.g. Frontend Developer" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
                             <div><label class="block text-sm font-medium text-slate-700">Phone Number</label><input name="phone" type="tel" value="${userProfile.phone || ''}" placeholder="e.g., 082 123 4567" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">LinkedIn Profile URL</label>
@@ -1899,15 +1936,30 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                                     <input name="experience" type="number" value="${userProfile.experience || '0'}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">Preferred Job Type</label>
+                                    <label class="block text-sm font-medium text-slate-700">Employment Type</label>
                                     <select name="jobType" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option ${userProfile.jobType === 'Full-time' ? 'selected' : ''}>Full-time</option>
-                                        <option ${userProfile.jobType === 'Part-time' ? 'selected' : ''}>Part-time</option>
-                                        <option ${userProfile.jobType === 'Contract' ? 'selected' : ''}>Contract</option>
-                                        <option ${userProfile.jobType === 'Internship' ? 'selected' : ''}>Internship</option>
-                                        <option ${userProfile.jobType === 'Hybrid' ? 'selected' : ''}>Hybrid</option>
-                                        <option ${userProfile.jobType === 'Remote' ? 'selected' : ''}>Remote</option>
+                                        <option value="Full-time" ${userProfile.jobType === 'Full-time' ? 'selected' : ''}>Full-time</option>
+                                        <option value="Part-time" ${userProfile.jobType === 'Part-time' ? 'selected' : ''}>Part-time</option>
+                                        <option value="Contract" ${userProfile.jobType === 'Contract' ? 'selected' : ''}>Contract</option>
+                                        <option value="Internship" ${userProfile.jobType === 'Internship' ? 'selected' : ''}>Internship</option>
+                                        <option value="Hybrid" ${userProfile.jobType === 'Hybrid' ? 'selected' : ''}>Hybrid</option>
+                                        <option value="Remote" ${userProfile.jobType === 'Remote' ? 'selected' : ''}>Remote</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Availability</label>
+                                    <select name="availability" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="" ${!userProfile.availability ? 'selected' : ''} disabled>Select availability</option>
+                                        <option value="Immediately available" ${userProfile.availability === 'Immediately available' ? 'selected' : ''}>Immediately available</option>
+                                        <option value="1 week notice" ${userProfile.availability === '1 week notice' ? 'selected' : ''}>1 week notice</option>
+                                        <option value="2 weeks notice" ${userProfile.availability === '2 weeks notice' ? 'selected' : ''}>2 weeks notice</option>
+                                        <option value="1 month notice" ${userProfile.availability === '1 month notice' ? 'selected' : ''}>1 month notice</option>
+                                        <option value="Negotiable" ${userProfile.availability === 'Negotiable' ? 'selected' : ''}>Negotiable</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Expected Salary Range</label>
+                                    <input name="expectedSalaryRange" type="text" value="${userProfile.expectedSalaryRange || userProfile.salaryExpectation || ''}" placeholder="e.g. R30,000 - R40,000 per month" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                 </div>
                             </div>
                             <div><label class="block text-sm font-medium text-slate-700">Skills</label><input name="skills" type="text" value="${userProfile.skills || ''}" placeholder="e.g. React, Node.js, Python" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
@@ -1936,6 +1988,7 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                 case 'companyProfile':
                     const companyProfile = state.allUsers[state.currentUser.uid] || {};
                     contentHtml = `
+                        <div id="company-profile-completion-meter" class="mb-6"></div>
                         <h2 class="text-2xl font-bold text-slate-800">Company Profile</h2>
                         <p class="text-slate-500 mt-1 mb-6">This information will be displayed on your company page and job posts.</p>
                         <form id="company-profile-form">
@@ -2059,6 +2112,76 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                     </div>
                 </div>
             `;
+
+            // --- Profile Completion Meter ---
+            if (state.settingsActiveTab === 'profile') {
+                const userProfile = state.candidates.find(c => c.id === state.currentUser.uid) || {};
+                const fieldLabels = [
+                    { key: 'name', label: 'Full Name', value: userProfile.name },
+                    { key: 'email', label: 'Email Address', value: userProfile.email || state.currentUser.email },
+                    { key: 'phone', label: 'Phone Number', value: userProfile.phone },
+                    { key: 'city', label: 'City', value: userProfile.city },
+                    { key: 'province', label: 'Province', value: userProfile.province },
+                    { key: 'country', label: 'Country', value: userProfile.country },
+                    { key: 'desiredRole', label: 'Job Title / Desired Role', value: userProfile.desiredRole || userProfile.jobTitle },
+                    { key: 'jobType', label: 'Employment Type', value: userProfile.jobType },
+                    { key: 'availability', label: 'Availability', value: userProfile.availability },
+                    { key: 'expectedSalaryRange', label: 'Expected Salary Range', value: userProfile.expectedSalaryRange || userProfile.salaryExpectation },
+                    { key: 'skills', label: 'Skills', value: userProfile.skills },
+                    { key: 'summary', label: 'Professional Summary', value: userProfile.summary },
+                    { key: 'linkedin', label: 'LinkedIn Profile', value: userProfile.linkedin },
+                    { key: 'github', label: 'GitHub/Portfolio', value: userProfile.github },
+                    { key: 'photoURL', label: 'Profile Photo', value: userProfile.photoURL },
+                    { key: 'cvFileName', label: 'CV File', value: userProfile.cvFileName }
+                ];
+                const filled = fieldLabels.filter(f => f.value).length;
+                const total = fieldLabels.length;
+                const percent = Math.round((filled / total) * 100);
+                const missing = fieldLabels.filter(f => !f.value).map(f => f.label);
+                const meter = document.getElementById('profile-completion-meter');
+                if (meter) {
+                    meter.innerHTML = `
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="text-sm font-medium text-slate-700">Public Profile Completion</span>
+                            <span class="text-xs font-semibold text-slate-600">${percent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-3 mb-2">
+                            <div class="bg-indigo-600 h-3 rounded-full transition-all" style="width: ${percent}%;"></div>
+                        </div>
+                        ${percent >= 50 && percent < 100 ? `<div class=\"mt-2 text-xs text-amber-700 bg-amber-100 rounded p-2\"><b>To reach 100%:</b><ul class=\"list-disc ml-5 mt-1\">${missing.map(label => `<li>${label}</li>`).join('')}</ul></div>` : ''}
+                    `;
+                }
+            }
+
+            // --- Company Profile Completion Meter ---
+            if (state.settingsActiveTab === 'companyProfile') {
+                const companyProfile = state.allUsers[state.currentUser.uid] || {};
+                const companyFields = [
+                    { key: 'photoURL', label: 'Company Logo', value: companyProfile.photoURL },
+                    { key: 'name', label: 'Company Name', value: state.currentUser.name },
+                    { key: 'phone', label: 'Company Phone', value: companyProfile.phone },
+                    { key: 'linkedin', label: 'Company LinkedIn', value: companyProfile.linkedin },
+                    { key: 'website', label: 'Website', value: companyProfile.website },
+                    { key: 'description', label: 'Company Description', value: companyProfile.description }
+                ];
+                const filled = companyFields.filter(f => f.value).length;
+                const total = companyFields.length;
+                const percent = Math.round((filled / total) * 100);
+                const missing = companyFields.filter(f => !f.value).map(f => f.label);
+                const meter = document.getElementById('company-profile-completion-meter');
+                if (meter) {
+                    meter.innerHTML = `
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="text-sm font-medium text-slate-700">Company Profile Completion</span>
+                            <span class="text-xs font-semibold text-slate-600">${percent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-3 mb-2">
+                            <div class="bg-indigo-600 h-3 rounded-full transition-all" style="width: ${percent}%;"></div>
+                        </div>
+                        ${percent >= 80 && percent < 100 ? `<div class=\"mt-2 text-xs text-amber-700 bg-amber-100 rounded p-2\"><b>To reach 100%:</b><ul class=\"list-disc ml-5 mt-1\">${missing.map(label => `<li>${label}</li>`).join('')}</ul></div>` : ''}
+                    `;
+                }
+            }
             lucide.createIcons();
 
             const saveBtn = document.getElementById('save-settings-btn');
@@ -2930,7 +3053,10 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
             const formData = new FormData(profileForm);
             const updatedProfile = {
                 name: formData.get('name'),
-                location: formData.get('location'),
+                city: formData.get('city'),
+                province: formData.get('province'),
+                country: formData.get('country'),
+                location: [formData.get('city'), formData.get('province'), formData.get('country')].filter(Boolean).join(', '),
                 phone: formData.get('phone'),
                 linkedin: formData.get('linkedin'),
                 github: formData.get('github'),
@@ -2938,6 +3064,9 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                 experience: formData.get('experience'),
                 summary: formData.get('summary'),
                 jobType: formData.get('jobType') || 'Full-time',
+                desiredRole: formData.get('desiredRole'),
+                availability: formData.get('availability'),
+                expectedSalaryRange: formData.get('expectedSalaryRange'),
             };
 
             if (state.newPhotoPreview) {
@@ -3763,12 +3892,41 @@ ${reportButtonHtml}</div>` : `<div class="hidden lg:flex items-center justify-ce
                     <button onclick="closeModal('candidate-details-modal')" class="text-slate-400 hover:text-slate-600 text-3xl">&times;</button>
                 </div>
                 <div class="p-8 overflow-y-auto">
-                    <div class="space-y-6">
+                    <div class="space-y-8">
                         <div>
                             <h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Contact Information</h3>
                              <div class="space-y-2">
                                 <p class="text-slate-600 flex items-center gap-2"><i data-lucide="mail" class="w-4 h-4 text-slate-400 flex-shrink-0"></i><span>${candidate.email || userEmail || 'Email not provided'}</span></p>
                                 <p class="text-slate-600 flex items-center gap-2"><i data-lucide="phone" class="w-4 h-4 text-slate-400 flex-shrink-0"></i><span>${candidate.phone || 'Phone not provided'}</span></p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800 mb-2 uppercase text-xs tracking-wider">Professional Details</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p class="text-slate-500">Full Name</p>
+                                    <p class="font-medium text-slate-800">${candidate.name || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-500">Job Title / Desired Role</p>
+                                    <p class="font-medium text-slate-800">${candidate.desiredRole || candidate.jobTitle || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-500">Employment Type</p>
+                                    <p class="font-medium text-slate-800">${candidate.jobType || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-500">Availability</p>
+                                    <p class="font-medium text-slate-800">${candidate.availability || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-500">Expected Salary Range</p>
+                                    <p class="font-medium text-slate-800">${candidate.expectedSalaryRange || candidate.salaryExpectation || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-500">Location</p>
+                                    <p class="font-medium text-slate-800">${(() => { const city = candidate.city || candidate.locationCity; const province = candidate.province || candidate.state || candidate.region; const country = candidate.country; const parts = [city, province, country].filter(Boolean); return parts.length ? parts.join(', ') : (candidate.location || 'Not specified'); })()}</p>
+                                </div>
                             </div>
                         </div>
                          <div>
