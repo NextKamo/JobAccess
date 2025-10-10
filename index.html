@@ -378,8 +378,73 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
+        // Function to remove profile photo or company logo
+        async function removeProfileOrLogo(imgId, inputId, type) {
+            try {
+                if (type === 'company') {
+                    const userDocRef = doc(db, "users", state.currentUser.uid);
+                    await updateDoc(userDocRef, {
+                        photoURL: ''
+                    });
+                    if (state.allUsers && state.currentUser && state.allUsers[state.currentUser.uid]) {
+                        state.allUsers[state.currentUser.uid].photoURL = '';
+                    }
+                } else {
+                    state.newPhotoPreview = null;
+                    const profileDocRef = doc(db, "profiles", state.currentUser.uid);
+                    await updateDoc(profileDocRef, {
+                        photoURL: ''
+                    });
+                    if (state.candidates && state.currentUser && state.candidates.find) {
+                        const user = state.candidates.find(c => c.id === state.currentUser.uid);
+                        if (user) user.photoURL = '';
+                    }
+                }
+                
+                // Update UI
+                const previewImg = document.getElementById(imgId);
+                if (previewImg) {
+                    previewImg.src = `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`;
+                }
+                const photoInput = document.getElementById(inputId);
+                if (photoInput) photoInput.value = '';
+                
+                // Show success notification
+                showConfirmationModal(
+                    "Photo Removed", 
+                    `Your ${type === 'company' ? 'company logo' : 'profile photo'} has been successfully removed.`,
+                    () => closeModal('confirmation-modal'),
+                    true,
+                    false,
+                    false
+                );
+            } catch (error) {
+                console.error("Error removing photo: ", error);
+                showConfirmationModal(
+                    "Error",
+                    "There was an error removing your photo. Please try again.",
+                    () => closeModal('confirmation-modal'),
+                    false,
+                    true,
+                    false
+                );
+            }
+        }
+        window.removeProfileOrLogo = removeProfileOrLogo;
+
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        function removeProfilePhoto() {
+            state.newPhotoPreview = null;
+            const previewImg = document.getElementById('profile-photo-preview');
+            if (previewImg) {
+                previewImg.src = `https://placehold.co/100x100/6366f1/ffffff?text=${state.currentUser.initials}`;
+            }
+            // Clear file input if exists
+            const photoInput = document.getElementById('photo-upload');
+            if (photoInput) photoInput.value = '';
+        }
         import { 
             getAuth, 
             createUserWithEmailAndPassword, 
@@ -1634,6 +1699,7 @@
                                         <span>Change</span>
                                         <input id="photo-upload" name="photo" type="file" class="sr-only" accept="image/*" onchange="handlePhotoFileSelect(event, 'profile-photo-preview')">
                                     </label>
+                                    <button type="button" onclick="removeProfileOrLogo('profile-photo-preview','photo-upload','user')" class="bg-red-50 text-red-600 border border-red-200 rounded-md px-3 py-2 text-sm font-medium hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Remove</button>
                                 </div>
                             </div>
                              <div>
@@ -1711,6 +1777,7 @@
                                             <span>Change</span>
                                             <input id="photo-upload" name="photo" type="file" class="sr-only" accept="image/*" onchange="handlePhotoFileSelect(event, 'company-logo-preview')">
                                         </label>
+                                        <button type="button" onclick="removeProfileOrLogo('company-logo-preview','photo-upload','company')" class="bg-red-50 text-red-600 border border-red-200 rounded-md px-3 py-2 text-sm font-medium hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Remove</button>
                                     </div>
                                 </div>
                                 <div><label class="block text-sm font-medium text-slate-700">Company Name</label><input name="name" type="text" value="${state.currentUser.name}" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></div>
@@ -3984,6 +4051,7 @@
         window.showAdminDeleteJobModal = showAdminDeleteJobModal;
         window.handleDismissReport = handleDismissReport;
         window.handleNotificationClick = handleNotificationClick;
+        window.removeProfilePhoto = removeProfilePhoto;
 
 
         document.addEventListener('click', function(event) {
