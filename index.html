@@ -8,6 +8,40 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Scrollable modal content */
+        .modal-content-scroll {
+            overflow-y: auto;
+            max-height: 80vh;
+            scrollbar-width: thin;
+            scrollbar-color: #3facc9 #e6f6fb;
+        }
+        .modal-content-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .modal-content-scroll::-webkit-scrollbar-thumb {
+            background: #3facc9;
+            border-radius: 4px;
+        }
+        .modal-content-scroll::-webkit-scrollbar-track {
+            background: #e6f6fb;
+        }
+        /* Universal scrollable card grid for jobs */
+        .scrollable-job-cards {
+            overflow-y: auto;
+            max-height: 400px;
+            scrollbar-width: thin;
+            scrollbar-color: #3facc9 #e6f6fb;
+        }
+        .scrollable-job-cards::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scrollable-job-cards::-webkit-scrollbar-thumb {
+            background: #3facc9;
+            border-radius: 4px;
+        }
+        .scrollable-job-cards::-webkit-scrollbar-track {
+            background: #e6f6fb;
+        }
         .cta-gradient-bg h2 {
             color: #fff !important;
         }
@@ -326,43 +360,43 @@
 
     <!-- Modals -->
     <div id="login-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <!-- Modal Content Loaded by JS -->
         </div>
     </div>
     
     <div id="job-details-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
            <!-- Modal Content Loaded by JS -->
         </div>
     </div>
     
     <div id="applicants-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
            <!-- Modal Content Loaded by JS -->
         </div>
     </div>
 
     <div id="post-job-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
            <!-- Modal Content Loaded by JS -->
         </div>
     </div>
 
      <div id="confirmation-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-md">
            <!-- Modal Content Loaded by JS -->
         </div>
     </div>
 
      <div id="report-job-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-lg">
            <!-- Modal Content Loaded by JS -->
         </div>
     </div>
     
     <div id="candidate-details-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div class="modal-content modal-content-scroll bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
            <!-- Modal Content Loaded by JS -->
         </div>
     </div>
@@ -927,14 +961,17 @@
                         <a href="#" onclick="handleNavigate('findJobs')" class="font-medium text-indigo-600 hover:text-indigo-800">View all jobs &rarr;</a>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="featured-jobs-scroll flex gap-6 overflow-x-auto pb-2">
+                        <div class="featured-jobs-scroll flex flex-col gap-6 overflow-y-auto max-h-[400px] pb-2">
                             <div class="min-w-[280px] max-w-xs bg-white p-6 rounded-xl border-2 border-dashed border-[#3facc9] flex flex-col items-center justify-center hover:shadow-lg transition-shadow cursor-pointer flex-shrink-0" onclick="showPostJobModal()">
+                        <!-- Apply scrollable-job-cards to all job card grids below -->
                                 <i data-lucide="plus-circle" class="w-12 h-12 text-[#3facc9] mb-2"></i>
                                 <h3 class="font-bold text-lg text-[#3facc9] mb-1">Post a New Job</h3>
                                 <p class="text-slate-500 text-center text-sm mb-2">Share an opportunity with the community.</p>
                                 <button class="theme-btn font-medium px-6 py-2 rounded-lg shadow-sm transition-colors mt-2">Post Job</button>
                             </div>
-                            ${jobListingsHtml}
+                            <div class="scrollable-job-cards flex flex-col gap-6">
+                                ${jobListingsHtml}
+                            </div>
                         </div>
         .featured-jobs-scroll {
             overflow-x: auto;
@@ -1250,7 +1287,9 @@
                  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <h1 class="text-3xl font-bold text-slate-800 mb-8">Saved Jobs</h1>
                     <div class="space-y-4">
-                        ${savedJobsHtml}
+                        <div class="scrollable-job-cards flex flex-col gap-6">
+                            ${savedJobsHtml}
+                        </div>
                     </div>
                 </div>
             `;
@@ -1655,7 +1694,9 @@
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    ${filteredCandidates.length > 0 ? candidatesHtml : '<p class="text-slate-500 md:col-span-3">No candidates match your search criteria.</p>'}
+                    <div class="scrollable-job-cards flex flex-col gap-6">
+                        ${filteredCandidates.length > 0 ? candidatesHtml : '<p class="text-slate-500 md:col-span-3">No candidates match your search criteria.</p>'}
+                    </div>
                 </div>
             </div>`;
 
